@@ -1,7 +1,5 @@
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.Reader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
@@ -16,7 +14,7 @@ public class Input {
     private String title;
     private List<Review> reviews;
 
-    private Input()
+    public Input()
     {}
 
     public static List<Input> parseFileToInputObjects(String path) {
@@ -53,7 +51,31 @@ public class Input {
     //to do
     // parseFileToInputObjects returns all entries of JSON objects separated by \n, and returns these entries as List<Input>
     // writeInputObjectToFile writes the given Input object to file path, as a JSON.
-    public static void writeInputObjectToFile(Input inp, String path){}
+    public static void writeInputObjectToFile(Input inp, String path){
+        JSONObject outputJSON = new JSONObject();
+        outputJSON.put("title", inp.getTitle());
+
+        JSONArray reviewsArray = new JSONArray();
+        for (Review review : inp.getReviews()) {
+            JSONObject reviewJSON = new JSONObject();
+            reviewJSON.put("id", review.getId());
+            reviewJSON.put("link", review.getLink());
+            reviewJSON.put("title", review.getTitle());
+            reviewJSON.put("text", review.getText());
+            reviewJSON.put("rating", review.getRating());
+            reviewJSON.put("author", review.getAuthor());
+            reviewJSON.put("date", review.getDate());
+            reviewsArray.add(reviewJSON);
+        }
+        outputJSON.put("reviews", reviewsArray);
+
+        try (FileWriter fileWriter = new FileWriter(path)) {
+            fileWriter.write(outputJSON.toJSONString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 
     public String getTitle() {
         return title;
@@ -68,5 +90,13 @@ public class Input {
                 "title='" + title + '\'' +
                 ", reviews=" + reviews +
                 '}';
+    }
+
+    public void setReviews(List<Review> reviews) {
+        this.reviews = reviews;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }
