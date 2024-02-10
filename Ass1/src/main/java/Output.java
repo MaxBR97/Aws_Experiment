@@ -67,25 +67,27 @@ public class Output {
        //to do    
     }
 
+    //update this function to read the given file and convert it to Output object,
+    // in order to access it's processedReviews field. (I had to make this method static)
     public static void writeOutputToHTMLFile(String fileName) {
-        // try {
-        //     FileWriter file = new FileWriter(fileName);
-        //     file.write("<html>\n<head>\n</head>\n<body>\n");
-        //     for (ProcessedReview pr : processedReviews) {
-        //         String color = pr.getColor().name().toLowerCase();
-        //         file.write("<div style=\"color: " + color + ";\">\n");
-        //         file.write("<p>Link: <a href=\"" + pr.getLink() + "\">" + pr.getLink() + "</a></p>\n");
-        //         file.write("<p>Named Entities: [" + String.join(", ", pr.getNamedEntities()) + "]</p>\n");
-        //         file.write("<p>Sarcasm Detection: " + (pr.isSarcastic() ? "Sarcastic" : "Not Sarcastic") + "</p>\n");
-        //         file.write("</div>\n");
-        //     }
+        try {
+            FileWriter file = new FileWriter(fileName);
+            file.write("<html>\n<head>\n</head>\n<body>\n");
+            for (ProcessedReview pr : processedReviews) {
+                String color = pr.getColor().name().toLowerCase();
+                file.write("<div style=\"color: " + color + ";\">\n");
+                file.write("<p>Link: <a href=\"" + pr.getLink() + "\">" + pr.getLink() + "</a></p>\n");
+                file.write("<p>Named Entities: [" + String.join(", ", pr.getNamedEntities()) + "]</p>\n");
+                file.write("<p>Sarcasm Detection: " + (pr.isSarcastic() ? "Sarcastic" : "Not Sarcastic") + "</p>\n");
+                file.write("</div>\n");
+            }
 
-        //     file.write("</body>\n</html>");
-        //     file.flush();
-        //     file.close();
-        // } catch (IOException e) {
-        //     e.printStackTrace();
-        // }
+            file.write("</body>\n</html>");
+            file.flush();
+            file.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void appendProcessedReview(ProcessedReview pr) {
