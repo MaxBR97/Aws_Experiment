@@ -142,10 +142,7 @@ public class App {
             }
 
             if(terminate){
-                //aws.stop(managerInstance);
-                // for(Instance worker : getAllActiveWorkers()){
-                //     aws.terminate(worker);
-                // }
+                aws.appendMessageToSQS(clientManagerQueueUrl, "terminate");
             }
         } catch (Exception e) {
             e.printStackTrace();

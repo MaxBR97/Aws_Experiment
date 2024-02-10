@@ -88,29 +88,36 @@ public class Manager {
             if(message!=null)
                 System.out.println("received message from client: "+message[0]);
             if(message!=null) {
-                String[] messageSegments = message[0].split(" ");
-                String clientKey = "";
-                String fileKey = "";
-                String saveToPath = Path.of("").toAbsolutePath().resolve(message[0]).toString();
-                if(messageSegments[0].equals("input")) {
-                    clientKey = messageSegments[1];
-                    fileKey = messageSegments[2];
-                    fileKeyToClient.put(fileKey, clientKey);
-                    boolean success = aws.getObjectFromBucket(S3bucket, fileKey, saveToPath);
-                    if(!success){
-                        aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
-                        try {
-                            Thread.sleep(3000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                    if(!message[0].equals("terminate")){
+                    String[] messageSegments = message[0].split(" ");
+                    String clientKey = "";
+                    String fileKey = "";
+                    String saveToPath = Path.of("").toAbsolutePath().resolve(message[0]).toString();
+                    if(messageSegments[0].equals("input")) {
+                        clientKey = messageSegments[1];
+                        fileKey = messageSegments[2];
+                        fileKeyToClient.put(fileKey, clientKey);
+                        boolean success = aws.getObjectFromBucket(S3bucket, fileKey, saveToPath);
+                        if(!success){
+                            aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
+                            try {
+                                Thread.sleep(3000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            continue;
                         }
-                        continue;
+                        int fragments = fragmentizeAndAppendWork(message, fileKey, saveToPath);
+                        aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
+                        currentTasksToProcess++;
+                        initializeWorkerIfNeeded();
+                        System.out.println("appended work to workers");
                     }
-                    int fragments = fragmentizeAndAppendWork(message, fileKey, saveToPath);
-                    aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
-                    currentTasksToProcess++;
-                    initializeWorkerIfNeeded();
-                    System.out.println("appended work to workers");
+                } else {
+                    for(Instance worker : getAllActiveWorkers()){
+                        aws.terminate(worker);
+                    }
+                    aws.terminate(aws.getEC2InstanceByTag("Name", "Manager").get(0));
                 }
                 
             }
