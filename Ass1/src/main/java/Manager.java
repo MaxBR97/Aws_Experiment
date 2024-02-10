@@ -190,7 +190,7 @@ public class Manager {
     }
 
     private static Instance initializeWorkerIfNeeded() {
-        if( ((float)currentTasksToProcess) / ((float)n) > ((float)currentWorkers) && currentWorkers <= 4){
+        if( ((float)currentTasksToProcess) / ((float)n) > ((float)currentWorkers) && currentWorkers <= 19){
                 String workerEC2name = "Worker";
             //            String ec2Script = "#!/bin/bash\n" +
             //            "echo Hello World\n";
