@@ -1,5 +1,6 @@
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
@@ -26,7 +27,12 @@ public class Input {
         try{
             JSONParser parser = new JSONParser();
             Reader reader = new FileReader(inputFile);
-            List<String> inputTextLines = Files.readAllLines(Paths.get(inputFile.getAbsolutePath()));
+            List<String> inputTextLines;
+            try{
+                 inputTextLines = Files.readAllLines(Paths.get(inputFile.getAbsolutePath()), StandardCharsets.UTF_8);
+            } catch (Exception e){
+                 inputTextLines = Files.readAllLines(Paths.get(inputFile.getAbsolutePath()), StandardCharsets.ISO_8859_1);   
+            }
             for(String line: inputTextLines){
                 Input cur = new Input();
                 cur.reviews = new LinkedList<Review>();

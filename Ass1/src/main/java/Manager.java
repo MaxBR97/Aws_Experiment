@@ -84,28 +84,40 @@ public class Manager {
        boolean keepRunning = true;
        while(keepRunning) {
         System.out.println("tasks being processed: "+currentTasksToProcess);
-            String[] message = aws.getMessageFromSQS(managerClientSqsQueueName, 0);
+            String[] message = aws.getMessageFromSQS(managerClientSqsQueueName, 10);
             if(message!=null)
                 System.out.println("received message from client: "+message[0]);
             if(message!=null) {
-                String[] messageSegments = message[0].split(" ");
-                String clientKey = "";
-                String fileKey = "";
-                String saveToPath = Path.of("").toAbsolutePath().resolve(message[0]).toString();
-                if(messageSegments[0].equals("input")) {
-                    clientKey = messageSegments[1];
-                    fileKey = messageSegments[2];
-                    fileKeyToClient.put(fileKey, clientKey);
-                    boolean success = aws.getObjectFromBucket(S3bucket, fileKey, saveToPath);
-                    if(!success){
+                    if(!message[0].equals("terminate")){
+                    String[] messageSegments = message[0].split(" ");
+                    String clientKey = "";
+                    String fileKey = "";
+                    String saveToPath = Path.of("").toAbsolutePath().resolve(message[0]).toString();
+                    if(messageSegments[0].equals("input")) {
+                        clientKey = messageSegments[1];
+                        fileKey = messageSegments[2];
+                        fileKeyToClient.put(fileKey, clientKey);
+                        boolean success = aws.getObjectFromBucket(S3bucket, fileKey, saveToPath);
+                        if(!success){
+                            aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
+                            try {
+                                Thread.sleep(3000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            continue;
+                        }
+                        int fragments = fragmentizeAndAppendWork(message, fileKey, saveToPath);
                         aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
-                        continue;
+                        currentTasksToProcess++;
+                        initializeWorkerIfNeeded();
+                        System.out.println("appended work to workers");
                     }
-                    int fragments = fragmentizeAndAppendWork(message, fileKey, saveToPath);
-                    aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
-                    currentTasksToProcess++;
-                    initializeWorkerIfNeeded();
-                    System.out.println("appended work to workers");
+                } else {
+                    for(Instance worker : getAllActiveWorkers()){
+                        aws.terminate(worker);
+                    }
+                    aws.terminate(aws.getEC2InstanceByTag("Name", "Manager").get(0));
                 }
                 
             }
@@ -116,7 +128,12 @@ public class Manager {
                 String fileKeyAndFragmentKey = message[0].split(" ")[1];
                 String fileKey = fileKeyAndFragmentKey.split("-")[0];
                 String clientKey = fileKeyToClient.get(fileKey);
-                String summaryFilePath = assembleFragment(message, fileKeyAndFragmentKey);
+                String summaryFilePath = null;
+                try {
+                    summaryFilePath = assembleFragment(message, fileKeyAndFragmentKey);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 if(summaryFilePath != null){
                     aws.putInBucket(S3bucket, new File(summaryFilePath),fileKey+"done" );
                     aws.appendMessageToSQS(managerClientSqsQueueName, "summary "+fileKeyToClient.get(fileKey)+" "+fileKey, clientKey);
@@ -139,7 +156,7 @@ public class Manager {
         if(!fileKeyToFragments.containsKey(fileKey)){
                 throw new Exception("failed assembleFragment, shouldnt happen");
         }
-        fileKeyToFragments.get(fileKey)[Integer.valueOf(fragmentId)] = saveFragmentToPath;
+        fileKeyToFragments.get(fileKey)[Integer.valueOf(fragmentId)-1] = saveFragmentToPath;
         boolean allFragmentsArrived = true;
         for(String str : fileKeyToFragments.get(fileKey)) {
             if(str == null){
@@ -173,7 +190,7 @@ public class Manager {
     }
 
     private static Instance initializeWorkerIfNeeded() {
-        if( ((float)currentTasksToProcess) / ((float)n) > ((float)currentWorkers) && currentWorkers <= 4){
+        if( ((float)currentTasksToProcess) / ((float)n) > ((float)currentWorkers) && currentWorkers <= 19){
                 String workerEC2name = "Worker";
             //            String ec2Script = "#!/bin/bash\n" +
             //            "echo Hello World\n";
@@ -190,8 +207,16 @@ public class Manager {
             "java -jar Worker.jar Worker\n" +
             "echo Running Worker.jar...\n"
             ;
+        //     String ec2Script = "#!/bin/bash\n" +
+        // "echo Worker jar running\n" +
+        // "echo s3://" + S3bucket + "/" + "Worker.jar" + "\n" +
+        // "mkdir WorkerFiles\n" +
+        // "aws s3 cp s3://" + S3bucket + "/" + "Worker.jar" + " ./WorkerFiles/" + "Worker.jar" + "\n" +
+        // "echo worker copy the jar from s3\n" +
+        // "java -jar /WorkerFiles/" + "Worker.jar" + "\n";
             String workerInstanceID = aws.createEC2(ec2Script, workerEC2name, 1);
             currentWorkers ++;
+            System.out.println("initialized worker");
             return aws.getEC2InstanceByTag("Name", workerEC2name).get(0);
         }
         return null;

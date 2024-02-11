@@ -20,13 +20,17 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 public class Worker {
     static String manageWorkerSqsQueueName = "manager-workers";
     static String S3bucket = "gfes";
-    static int visibilityTimeout = 10; // seconds to make message invisible in queue but still present.
+    static int visibilityTimeout = 12; // seconds to make message invisible in queue but still present.
     static String saveTaskToFile = "task";
     static String[] toHandle;
     static AWS aws;
     public static Object lock = new Object();
     public static void main(String... args) {
+        System.out.println("running worker");
+        // List<Input> inputs2 = Input.parseFileToInputObjects("C:\\Users\\Max\\Distributed Systems\\Ass1\\task9022557-2");
+        // System.out.println(inputs2.toString());
         aws = AWS.getInstance();
+        String random = aws.generateUniqueKey();
         saveTaskToFile =  Path.of("").toAbsolutePath().resolve(saveTaskToFile).toString();
         activateTimingThread();
         while(true){
@@ -35,7 +39,7 @@ public class Worker {
                 System.out.println(message[0]);
             if(message != null && message[0].split(" ")[0].equals("task")) {
                 toHandle = message;
-                synchronized(lock){lock.notify();}
+                synchronized(lock){lock.notifyAll();}
                 System.out.println("received task");
                 String fileKey = message[0].split(" ")[1];
                 aws.getObjectFromBucket(S3bucket,"task "+fileKey, saveTaskToFile + fileKey);
@@ -47,8 +51,8 @@ public class Worker {
                         outputManager.appendProcessedReview(reviewMapper.process(review));
                     }
                 }
-                outputManager.writeOutputToJSONFile(Path.of("").toAbsolutePath().resolve("finishedTask.json").toString());
-                aws.putInBucket(S3bucket, new File(Path.of("").toAbsolutePath().resolve("finishedTask.json").toString()),fileKey+"doneWorker");
+                outputManager.writeOutputToJSONFile(Path.of("").toAbsolutePath().resolve("finishedTask"+random+".json").toString());
+                aws.putInBucket(S3bucket, new File(Path.of("").toAbsolutePath().resolve("finishedTask"+random+".json").toString()),fileKey+"doneWorker");
                 aws.appendMessageToSQS(manageWorkerSqsQueueName, "finished "+fileKey, "finished");
                 aws.deleteFromSQS(manageWorkerSqsQueueName, message[1]);
                 toHandle = null;
@@ -73,7 +77,11 @@ public class Worker {
                                 timeElapsed = System.currentTimeMillis() - startTime;
                                 if(timeElapsed >= (visibilityTimeout * 1000)/2)
                                     {
-                                        aws.delayMessageInvisibility(manageWorkerSqsQueueName, toHandle[1], visibilityTimeout);
+                                        try{
+                                            aws.delayMessageInvisibility(manageWorkerSqsQueueName, toHandle[1], visibilityTimeout);
+                                        } catch (Exception e){
+                                            
+                                        }
                                         timeElapsed = 0;
                                         startTime = System.currentTimeMillis();
                                         System.out.println("delayed sqs message invisibility");

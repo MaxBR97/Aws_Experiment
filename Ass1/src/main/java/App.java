@@ -104,7 +104,7 @@ public class App {
         try {
             aws.createBucketIfNotExists(S3bucketName);
             aws.createSQSIfNotExists(clientManagerQueueUrl);
-            Instance managerInstance = getRunningManager();
+            //Instance managerInstance = getRunningManager();
             for(String inputPath : inputPaths){
                 aws.putInBucket(S3bucketName, new File(inputPath), inputToKeyMapping.get(inputPath));
                 aws.appendMessageToSQS(clientManagerQueueUrl,"input "+clientKey+" " + inputToKeyMapping.get(inputPath), clientKey);//format: "input <clientKey> <S3 file key>"
@@ -128,18 +128,22 @@ public class App {
                             outputForThisSummary = outputPaths.get(i);
                     }
                     aws.deleteFromSQS(clientManagerQueueUrl, message[1]);
+                    if(outputForThisSummary != null) {
                     aws.getObjectFromBucket(S3bucketName, fileKey+"done", outputForThisSummary);
                     aws.deleteFromBucket(S3bucketName, fileKey+"done");
+                    
                     totalRecieved ++;
                     // uncomment the next line to get the html file done
-                    // Output.writeOutputToHTMLFile(outputForThisSummary);
+                    //Output.writeOutputToHTMLFile(outputForThisSummary);
+                    }
                 }else {
                     Thread.sleep(2000);
                 }
             }
 
-            if(terminate)
-                aws.stop(managerInstance);
+            if(terminate){
+                aws.appendMessageToSQS(clientManagerQueueUrl, "terminate");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -174,6 +178,17 @@ public class App {
         ;
         String managerInstanceID = aws.createEC2(ec2Script, managerEC2name, 1);
         return aws.getEC2InstanceByTag("Name", managerEC2name).get(0);
+    }
+
+    private static List<Instance> getAllActiveWorkers() {
+        List<Instance> total = aws.getEC2InstanceByTag("Name", "Worker");
+        List<Instance> ans = new LinkedList<Instance>();
+        for(Instance inst: total) {
+
+            if(inst.state().code() == 0 ||inst.state().code() == 16)
+                ans.add(inst);
+        }
+        return ans;
     }
 
     private static Instance getRunningManager() throws Exception {
