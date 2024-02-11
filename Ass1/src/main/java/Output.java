@@ -1,18 +1,3 @@
-
-//Example HTML file:
-// <!-- <!DOCTYPE html>
-// <html>
-// <head>
-// <title>Page Title</title>
-// </head>
-// <body>
-
-// <h1>This is a Heading</h1>
-// <p>This is a paragraph.</p>
-
-// </body>
-// </html> -->
-
 import java.io.*;
 import java.util.*;
 
@@ -33,16 +18,16 @@ public class Output {
         processedReviews = new LinkedList();
     }
 
-     public void writeOutputToJSONFile(String path) {
+    public void writeOutputToJSONFile(String path) {
         JSONObject obj = new JSONObject();
-		JSONArray procReviews = new JSONArray();
+        JSONArray procReviews = new JSONArray();
         Iterator<ProcessedReview> it = processedReviews.iterator();
         for(int i=0; i<processedReviews.size(); i++) {
             JSONObject entry = new JSONObject();
             ProcessedReview pr = it.next();
             entry.put("link",pr.getLink());
             entry.put("color",pr.getColor().name());
-            JSONArray allEntities = new JSONArray();    
+            JSONArray allEntities = new JSONArray();
             allEntities.addAll(pr.getNamedEntities());
             entry.put("namedEntities", allEntities);
             entry.put("isSarcastic",pr.isSarcastic());
@@ -50,18 +35,18 @@ public class Output {
         }
         obj.put("processedEntries",procReviews);
 
-		try {
-			FileWriter file = new FileWriter(path);
-			file.write(obj.toJSONString());
-			file.flush();
-			file.close();
+        try {
+            FileWriter file = new FileWriter(path);
+            file.write(obj.toJSONString());
+            file.flush();
+            file.close();
 
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    //This function recieves list of file paths with JSON content, 
+    //This function recieves list of file paths with JSON content,
     //and it assembles all of them to the destination file, separated with "\n" between two JSONs.
     public static void assembleFiles(String[] paths, String destinationFile) {
         try (FileWriter output_file = new FileWriter(destinationFile)) {
@@ -83,6 +68,7 @@ public class Output {
             e.printStackTrace();
         }
     }
+
 
     public static void writeOutputToHTMLFile(String fileName) throws ParseException, IOException {
         // try {
@@ -108,31 +94,37 @@ public class Output {
         // read json file
         JSONParser parser = new JSONParser();
         Reader reader = new FileReader(fileName);
-        JSONObject jsonObject = (JSONObject) parser.parse(reader);
-        reader.close();
-
-        // Get the array of processed reviews
-        JSONArray processedEntries = (JSONArray) jsonObject.get("processedEntries");
+        BufferedReader br = new BufferedReader(reader);
+        List<String> json_list = new ArrayList<>();
+        String line;
+        while ((line = br.readLine()) != null) {
+            json_list.add(line);
+        }
 
         // Write HTML file
         try(FileWriter fileWriter = new FileWriter(fileName)) {
             fileWriter.write("<html>\n<head>\n</head>\n<body>\n");
 
-            // Iterate over processed reviews
-            for (Object entry : processedEntries) {
-                JSONObject processedReview = (JSONObject) entry;
-                String link = (String) processedReview.get("link");
-                String color = ((String) processedReview.get("color")).toLowerCase().replace("_","");
-                JSONArray namedEntities = (JSONArray) processedReview.get("namedEntities");
-                boolean isSarcastic = (boolean) processedReview.get("isSarcastic");
+            for ( String json :json_list ) {
+                JSONObject jsonObject = (JSONObject) parser.parse(json);
 
-                fileWriter.write("<div style=\"color: " + color + ";\">\n");
-                fileWriter.write("<p>Link: <a href=\"" + link + "\">" + link + "</a></p>\n");
-                fileWriter.write("<p>Named Entities: [" + String.join(", ", namedEntities) + "]</p>\n");
-                fileWriter.write("<p>Sarcasm Detection: " + (isSarcastic ? "Sarcastic" : "Not Sarcastic") + "</p>\n");
-                fileWriter.write("</div>\n");
+                // Get the array of processed reviews
+                JSONArray processedEntries = (JSONArray) jsonObject.get("processedEntries");
+                // Iterate over processed reviews
+                for (Object entry : processedEntries) {
+                    JSONObject processedReview = (JSONObject) entry;
+                    String link = (String) processedReview.get("link");
+                    String color = ((String) processedReview.get("color")).toLowerCase().replace("_", "");
+                    JSONArray namedEntities = (JSONArray) processedReview.get("namedEntities");
+                    boolean isSarcastic = (boolean) processedReview.get("isSarcastic");
+
+                    fileWriter.write("<div style=\"color: " + color + ";\">\n");
+                    fileWriter.write("<p>Link: <a href=\"" + link + "\">" + link + "</a></p>\n");
+                    fileWriter.write("<p>Named Entities: [" + String.join(", ", namedEntities) + "]</p>\n");
+                    fileWriter.write("<p>Sarcasm Detection: " + (isSarcastic ? "Sarcastic" : "Not Sarcastic") + "</p>\n");
+                    fileWriter.write("</div>\n");
+                }
             }
-
             fileWriter.write("</body>\n</html>");
         }
         catch (IOException e) {
@@ -148,5 +140,5 @@ public class Output {
     public void appendProcessedReviews(List<ProcessedReview> pr) {
         processedReviews.addAll(pr);
     }
-    
+
 }
