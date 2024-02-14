@@ -136,27 +136,41 @@ public class AWS {
             s3.createBucket(CreateBucketRequest
                     .builder()
                     .bucket(bucketName)
+                    .objectOwnership(ObjectOwnership.BUCKET_OWNER_PREFERRED)
+                    // .acl(BucketCannedACL.)
+                    
                     .createBucketConfiguration(
                             CreateBucketConfiguration.builder()
                                     .locationConstraint(BucketLocationConstraint.US_WEST_2)
+                    
                                     .build())
                     .build());
+                    
             s3.waiter().waitUntilBucketExists(HeadBucketRequest.builder()
                     .bucket(bucketName)
                     .build());
+            s3.putPublicAccessBlock(PutPublicAccessBlockRequest.builder()
+                    .bucket(bucketName)
+                    .publicAccessBlockConfiguration(PublicAccessBlockConfiguration.builder()
+                    .blockPublicAcls(false)
+                    .blockPublicPolicy(false)
+                    .ignorePublicAcls(false)
+                    .restrictPublicBuckets(false).build())
+                    .build());
+            s3.putBucketAcl(PutBucketAclRequest.builder().bucket(bucketName).acl(BucketCannedACL.PUBLIC_READ_WRITE).build());
             //this.putInBucket(bucketName, new File(Path.of("").toAbsolutePath().resolve("Manager.jar").toString()),"Manager.jar");
-            //this.putInBucket(bucketName, new File(Path.of("").toAbsolutePath().resolve("Worker.jar").toString()),"Worker.jar");
+            this.putInBucket(bucketName, new File(Path.of("").toAbsolutePath().resolve("Worker.jar").toString()),"Worker.jar");
         } catch (S3Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
     public void putInBucket(String bucketName, File content, String fileKey) {
-        s3.putObject(PutObjectRequest.builder().bucket(bucketName).key(fileKey).build(),content.toPath());
+        s3.putObject(PutObjectRequest.builder().bucket(bucketName).key(fileKey).acl(ObjectCannedACL.PUBLIC_READ_WRITE).build(),content.toPath());
     }
 
     public void putInBucket(String bucketName, String content, String fileKey) {
-        s3.putObject(PutObjectRequest.builder().bucket(bucketName).key(fileKey).build(),RequestBody.fromString(content));
+        s3.putObject(PutObjectRequest.builder().bucket(bucketName).key(fileKey).acl(ObjectCannedACL.PUBLIC_READ_WRITE).build(),RequestBody.fromString(content));
     }
 
     public boolean getObjectFromBucket(String bucketName, String keyName, String path) {

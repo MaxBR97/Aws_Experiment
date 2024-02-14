@@ -71,26 +71,6 @@ public class Output {
 
 
     public static void writeOutputToHTMLFile(String fileName) throws ParseException, IOException {
-        // try {
-        //     FileWriter file = new FileWriter(fileName);
-        //     file.write("<html>\n<head>\n</head>\n<body>\n");
-        //     for (ProcessedReview pr : processedReviews) {
-        //         String color = pr.getColor().name().toLowerCase();
-        //         file.write("<div style=\"color: " + color + ";\">\n");
-        //         file.write("<p>Link: <a href=\"" + pr.getLink() + "\">" + pr.getLink() + "</a></p>\n");
-        //         file.write("<p>Named Entities: [" + String.join(", ", pr.getNamedEntities()) + "]</p>\n");
-        //         file.write("<p>Sarcasm Detection: " + (pr.isSarcastic() ? "Sarcastic" : "Not Sarcastic") + "</p>\n");
-        //         file.write("</div>\n");
-        //     }
-
-        //     file.write("</body>\n</html>");
-        //     file.flush();
-        //     file.close();
-        // } catch (IOException e) {
-        //     e.printStackTrace();
-        // }
-
-
         // read json file
         JSONParser parser = new JSONParser();
         Reader reader = new FileReader(fileName);

@@ -134,7 +134,7 @@ public class App {
                     
                     totalRecieved ++;
                     // uncomment the next line to get the html file done
-                    //Output.writeOutputToHTMLFile(outputForThisSummary);
+                    Output.writeOutputToHTMLFile(outputForThisSummary);
                     }
                 }else {
                     Thread.sleep(2000);

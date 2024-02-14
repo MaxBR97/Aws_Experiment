@@ -67,12 +67,12 @@ public class Manager {
 
     public static void main(String... args) {
         aws = AWS.getInstance();
+        System.out.println("running");
         aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
        if(args.length < 1){
             System.out.println("not enough arguments");
             System.exit(1);
        }
-       System.out.println("running");
        n = Integer.valueOf(args[0]);
        currentWorkers = getAllActiveWorkers().size();
        currentTasksToProcess = 0;
@@ -190,7 +190,7 @@ public class Manager {
     }
 
     private static Instance initializeWorkerIfNeeded() {
-        if( ((float)currentTasksToProcess) / ((float)n) > ((float)currentWorkers) && currentWorkers <= 19){
+        if( ((float)currentTasksToProcess) / ((float)n) > ((float)currentWorkers) && currentWorkers <= 7){
                 String workerEC2name = "Worker";
             //            String ec2Script = "#!/bin/bash\n" +
             //            "echo Hello World\n";
@@ -200,13 +200,15 @@ public class Manager {
             "cd /home/ubuntu/java\n" +
             "wget https://corretto.aws/downloads/latest/amazon-corretto-21-x64-linux-jdk.tar.gz\n" +
             "sudo tar -xvf amazon-corretto-21-x64-linux-jdk.tar.gz\n" + //get java
-            "export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.13.1-linux-x64/bin:$PATH\n" + //set java in path
-            "echo 'export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.13.1-linux-x64/bin:$PATH' | tee -a ~/.bashrc\n\n" +//doesnt do anything
+            "export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH\n" + //set java in path
+            "echo 'export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH' | tee -a ~/.bashrc\n" +//doesnt do anything
             "source ~/.bashrc\n" +
             "wget https://"+S3bucket+".s3.us-west-2.amazonaws.com/Worker.jar\n" +
-            "java -jar Worker.jar Worker\n" +
+            "cd ..\n"+
+            "java -jar ./java/Worker.jar Worker\n" +
             "echo Running Worker.jar...\n"
             ;
+            
         //     String ec2Script = "#!/bin/bash\n" +
         // "echo Worker jar running\n" +
         // "echo s3://" + S3bucket + "/" + "Worker.jar" + "\n" +
@@ -236,3 +238,18 @@ public class Manager {
     
 
 }
+
+
+// #!/bin/bash; 
+//             echo Downloading Worker.jar...;
+//             mkdir /home/ubuntu/java;
+//             cd /home/ubuntu/java;
+//             wget https://corretto.aws/downloads/latest/amazon-corretto-21-x64-linux-jdk.tar.gz\n;
+//             sudo tar -xvf amazon-corretto-21-x64-linux-jdk.tar.gz;
+//             export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH;
+//             echo 'export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH' | tee -a ~/.bashrc;
+//             source ~/.bashrc;
+//             wget https://gfes.s3.us-west-2.amazonaws.com/Worker.jar;
+//             java -jar Worker.jar Worker;
+//             echo Running Worker.jar...;
+            

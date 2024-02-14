@@ -42,7 +42,10 @@ public class Worker {
                 synchronized(lock){lock.notifyAll();}
                 System.out.println("received task");
                 String fileKey = message[0].split(" ")[1];
-                aws.getObjectFromBucket(S3bucket,"task "+fileKey, saveTaskToFile + fileKey);
+                if(!aws.getObjectFromBucket(S3bucket,"task "+fileKey, saveTaskToFile + fileKey)){
+                    System.out.println("task doesnt exist. Keeps receiving tasks");
+                    continue;
+                }
                 List<Input> inputs = Input.parseFileToInputObjects(saveTaskToFile + fileKey);
                 ReviewMapper reviewMapper = new ReviewMapper();
                 Output outputManager = new Output();
