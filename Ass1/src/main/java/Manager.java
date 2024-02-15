@@ -68,7 +68,7 @@ public class Manager {
     public static void main(String... args) {
         aws = AWS.getInstance();
         System.out.println("running Manager");
-        aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
+        //aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
        if(args.length < 1){
             System.out.println("not enough arguments");
             System.exit(1);
@@ -82,7 +82,12 @@ public class Manager {
        aws.createSQSIfNotExists(managerWorkerSqsQueueName);
        
        boolean keepRunning = true;
+       boolean terminateSent = false;
        while(keepRunning) {
+        if(terminateSent && currentTasksToProcess <= 0){
+            keepRunning = false;
+            break;
+        }
         System.out.println("tasks being processed: "+currentTasksToProcess);
             String[] message = aws.getMessageFromSQS(managerClientSqsQueueName, 10);
             if(message!=null)
@@ -114,10 +119,7 @@ public class Manager {
                         System.out.println("appended work to workers");
                     }
                 } else {
-                    for(Instance worker : getAllActiveWorkers()){
-                        aws.terminate(worker);
-                    }
-                    aws.terminate(aws.getEC2InstanceByTag("Name", "Manager").get(0));
+                    terminateSent = true;
                 }
                 
             }
@@ -144,6 +146,12 @@ public class Manager {
                 Thread.sleep(1000);
             }catch(Exception e){}
         }
+
+        //terminate all workers and self terminate
+        for(Instance worker : getAllActiveWorkers()){
+            aws.terminate(worker);
+        }
+        aws.terminate(aws.getEC2InstanceByTag("Name", "Manager").get(0));
 }
     //if all fragments of a task are assembled, return the path to the summary file, else null
     private static String assembleFragment(String[] message, String fileKeyAndFragmentKey) throws Exception{
