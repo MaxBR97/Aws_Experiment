@@ -40,10 +40,11 @@ public class Worker {
             if(message != null && message[0].split(" ")[0].equals("task")) {
                 toHandle = message;
                 synchronized(lock){lock.notifyAll();}
-                System.out.println("received task");
+                System.out.println("received task!!");
                 String fileKey = message[0].split(" ")[1];
                 if(!aws.getObjectFromBucket(S3bucket,"task "+fileKey, saveTaskToFile + fileKey)){
                     System.out.println("task doesnt exist. Keeps receiving tasks");
+                    aws.deleteFromSQS(manageWorkerSqsQueueName, message[1]);
                     continue;
                 }
                 List<Input> inputs = Input.parseFileToInputObjects(saveTaskToFile + fileKey);

@@ -67,7 +67,7 @@ public class Manager {
 
     public static void main(String... args) {
         aws = AWS.getInstance();
-        System.out.println("running");
+        System.out.println("running Manager");
         aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
        if(args.length < 1){
             System.out.println("not enough arguments");
@@ -154,7 +154,7 @@ public class Manager {
         aws.getObjectFromBucket(S3bucket, fileKeyAndFragmentKey+"doneWorker", saveFragmentToPath);
         aws.deleteFromSQS(managerWorkerSqsQueueName, message[1]);
         if(!fileKeyToFragments.containsKey(fileKey)){
-                throw new Exception("failed assembleFragment, shouldnt happen");
+                throw new Exception("failed assembleFragment, probably happened because a task of an older run was tried to be processed. This exception is ignored and manager keeps running.");
         }
         fileKeyToFragments.get(fileKey)[Integer.valueOf(fragmentId)-1] = saveFragmentToPath;
         boolean allFragmentsArrived = true;

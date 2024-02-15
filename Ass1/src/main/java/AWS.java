@@ -247,7 +247,7 @@ public class AWS {
         // ec2.createSecurityGroup(createSecurityGroupRequest);
         
         RunInstancesRequest runRequest = (RunInstancesRequest) RunInstancesRequest.builder()
-                .instanceType(InstanceType.T2_MICRO)
+                .instanceType(InstanceType.T2_MEDIUM)
                 .imageId(ami)
                 .maxCount(numberOfInstances)
                 .minCount(1)

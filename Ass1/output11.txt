@@ -1,0 +1,56 @@
+<html>
+<head>
+</head>
+<body>
+<div style="color: lightgreen;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/R2Q0PPQ18OXN9/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/R2Q0PPQ18OXN9/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+<div style="color: black;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/RZYFWT276TO8K/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/RZYFWT276TO8K/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+<div style="color: black;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/R2K5E7GXYJB2OD/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/R2K5E7GXYJB2OD/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+<div style="color: red;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/R3QKBFRYMJTRC8/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/R3QKBFRYMJTRC8/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+<div style="color: red;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/R2R3VHZOBOKHH3/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/R2R3VHZOBOKHH3/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Sarcastic</p>
+</div>
+<div style="color: red;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/R20C15AL3RZNFK/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/R20C15AL3RZNFK/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+<div style="color: red;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/RF7T03L50TV2Y/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/RF7T03L50TV2Y/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Sarcastic</p>
+</div>
+<div style="color: lightgreen;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/RPGSRSWYE4BMV/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/RPGSRSWYE4BMV/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+<div style="color: lightgreen;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/R2M9GCGH0QS9ER/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/R2M9GCGH0QS9ER/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+<div style="color: lightgreen;">
+<p>Link: <a href="https://www.amazon.com/gp/customer-reviews/R13A1E84GQINZW/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604">https://www.amazon.com/gp/customer-reviews/R13A1E84GQINZW/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=0689835604</a></p>
+<p>Named Entities: []</p>
+<p>Sarcasm Detection: Not Sarcastic</p>
+</div>
+</body>
+</html>
