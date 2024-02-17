@@ -19,7 +19,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 public class Worker {
     static String manageWorkerSqsQueueName = "manager-workers";
-    static String S3bucket = "gfes";
+    static String S3bucket = "sdjkfhsdjkfhsdjkfhkjbaskjdbasasdasd";
     static int visibilityTimeout = 12; // seconds to make message invisible in queue but still present.
     static String saveTaskToFile = "task";
     static String[] toHandle;

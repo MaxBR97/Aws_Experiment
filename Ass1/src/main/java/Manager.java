@@ -49,7 +49,7 @@ public class Manager {
 
     static String managerClientSqsQueueName = "manager-client";
 
-    static String S3bucket = "gfes";
+    static String S3bucket = "sdjkfhsdjkfhsdjkfhkjbaskjdbasasdasd";
 
     static AWS aws;
 
@@ -64,11 +64,11 @@ public class Manager {
     static HashMap<String,String> fileKeyToClient = new HashMap<>();
 
     static HashMap<String,String[]> fileKeyToFragments = new HashMap<>();
-
+    static Set<String> seenSQS = new HashSet<>();
     public static void main(String... args) {
         aws = AWS.getInstance();
         System.out.println("running Manager");
-        //aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
+        aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
        if(args.length < 1){
             System.out.println("not enough arguments");
             System.exit(1);
@@ -82,23 +82,21 @@ public class Manager {
        aws.createSQSIfNotExists(managerWorkerSqsQueueName);
        
        boolean keepRunning = true;
-       boolean terminateSent = false;
        while(keepRunning) {
-        if(terminateSent && currentTasksToProcess <= 0){
-            keepRunning = false;
-            break;
-        }
         System.out.println("tasks being processed: "+currentTasksToProcess);
             String[] message = aws.getMessageFromSQS(managerClientSqsQueueName, 10);
+
             if(message!=null)
                 System.out.println("received message from client: "+message[0]);
             if(message!=null) {
-                    if(!message[0].equals("terminate")){
+
+                if(!seenSQS.contains(message[0]) && !message[0].equals("terminate")){
                     String[] messageSegments = message[0].split(" ");
                     String clientKey = "";
                     String fileKey = "";
                     String saveToPath = Path.of("").toAbsolutePath().resolve(message[0]).toString();
                     if(messageSegments[0].equals("input")) {
+                        seenSQS.add(message[0]);
                         clientKey = messageSegments[1];
                         fileKey = messageSegments[2];
                         fileKeyToClient.put(fileKey, clientKey);
@@ -118,8 +116,19 @@ public class Manager {
                         initializeWorkerIfNeeded();
                         System.out.println("appended work to workers");
                     }
-                } else {
-                    terminateSent = true;
+                }
+                else if(seenSQS.contains(message[0])){
+                    aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
+                }
+                else if (message[0].equals("terminate")) {
+                    System.out.println("terminate");
+                    for(Instance worker : getAllActiveWorkers()){
+                        aws.terminate(worker);
+                    }
+                    aws.deleteFromSQS(managerClientSqsQueueName, message[1]);
+                    aws.terminate(aws.getEC2InstanceByTag("Name", "Manager").get(0));
+
+                    return;
                 }
                 
             }
@@ -146,12 +155,6 @@ public class Manager {
                 Thread.sleep(1000);
             }catch(Exception e){}
         }
-
-        //terminate all workers and self terminate
-        for(Instance worker : getAllActiveWorkers()){
-            aws.terminate(worker);
-        }
-        aws.terminate(aws.getEC2InstanceByTag("Name", "Manager").get(0));
 }
     //if all fragments of a task are assembled, return the path to the summary file, else null
     private static String assembleFragment(String[] message, String fileKeyAndFragmentKey) throws Exception{
@@ -213,8 +216,11 @@ public class Manager {
             "source ~/.bashrc\n" +
             "wget https://"+S3bucket+".s3.us-west-2.amazonaws.com/Worker.jar\n" +
             "cd ..\n"+
-            "java -jar ./java/Worker.jar Worker\n" +
-            "echo Running Worker.jar...\n"
+            "while true\n" +  // Start an infinite loop
+            "do\n" +
+            "   java -Xms7000m -Xmx7750m -jar ./java/Worker.jar Worker\n" +
+            "   echo Running Worker.jar...\n"+
+            "done\n"
             ;
             
         //     String ec2Script = "#!/bin/bash\n" +
@@ -224,7 +230,7 @@ public class Manager {
         // "aws s3 cp s3://" + S3bucket + "/" + "Worker.jar" + " ./WorkerFiles/" + "Worker.jar" + "\n" +
         // "echo worker copy the jar from s3\n" +
         // "java -jar /WorkerFiles/" + "Worker.jar" + "\n";
-            String workerInstanceID = aws.createEC2(ec2Script, workerEC2name, 1);
+            String workerInstanceID = aws.createEC2Worker(ec2Script, workerEC2name, 1);
             currentWorkers ++;
             System.out.println("initialized worker");
             return aws.getEC2InstanceByTag("Name", workerEC2name).get(0);

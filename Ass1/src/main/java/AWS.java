@@ -8,15 +8,7 @@ import software.amazon.awssdk.services.ec2.model.*;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.ChangeMessageVisibilityRequest;
-import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
-import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
-import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
-import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
-import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse;
-import software.amazon.awssdk.services.sqs.model.SendMessageBatchResponse;
-import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
-import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
+import software.amazon.awssdk.services.sqs.model.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -234,9 +226,14 @@ public class AWS {
     public void deleteBucket(String bucketName) {
         s3.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build());
     }
-
+    public void purgeSQS(String queueUrl){
+        PurgeQueueRequest pqRequest = PurgeQueueRequest.builder()
+                .queueUrl(queueUrl)
+                .build();
+        sqs.purgeQueue(pqRequest);
+    }
     // EC2
-    public String createEC2(String script, String tagName, int numberOfInstances) {        
+    public String createEC2Worker(String script, String tagName, int numberOfInstances) {
         Ec2Client ec2 = Ec2Client.builder().region(region2).build();
 
         // CreateSecurityGroupRequest createSecurityGroupRequest = CreateSecurityGroupRequest.builder()
@@ -246,6 +243,63 @@ public class AWS {
     
         // ec2.createSecurityGroup(createSecurityGroupRequest);
         
+        RunInstancesRequest runRequest = (RunInstancesRequest) RunInstancesRequest.builder()
+                .instanceType(InstanceType.T2_LARGE)
+                .imageId(ami)
+                .maxCount(numberOfInstances)
+                .minCount(1)
+                .keyName("vockey")
+                .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
+                .userData(Base64.getEncoder().encodeToString((script).getBytes()))
+                .build();
+
+
+        RunInstancesResponse response = ec2.runInstances(runRequest);
+
+        String securityGroupId = response.instances().get(0).securityGroups().get(0).groupId();
+        // Adding inbound rule to the security group allowing SSH from any source
+        //very useful to check the ec2 remotely
+        ec2.authorizeSecurityGroupIngress(AuthorizeSecurityGroupIngressRequest.builder()
+                .groupId(securityGroupId)
+                .ipProtocol("tcp")
+                .fromPort(22)
+                .toPort(22)
+                .build());
+        String instanceId = response.instances().get(0).instanceId();
+
+        software.amazon.awssdk.services.ec2.model.Tag tag = Tag.builder()
+                .key("Name")
+                .value(tagName)
+                .build();
+
+        CreateTagsRequest tagRequest = (CreateTagsRequest) CreateTagsRequest.builder()
+                .resources(instanceId)
+                .tags(tag)
+                .build();
+
+        try {
+            ec2.createTags(tagRequest);
+            System.out.printf(
+                    "[DEBUG] Successfully started EC2 instance %s based on AMI %s\n",
+                    instanceId, ami);
+
+        } catch (Ec2Exception e) {
+            System.err.println("[ERROR] " + e.getMessage());
+            System.exit(1);
+        }
+        return instanceId;
+    }
+    // EC2
+    public String createEC2(String script, String tagName, int numberOfInstances) {
+        Ec2Client ec2 = Ec2Client.builder().region(region2).build();
+
+        // CreateSecurityGroupRequest createSecurityGroupRequest = CreateSecurityGroupRequest.builder()
+        // .groupName("BaeldungSecurityGroup")
+        // .description("Baeldung Security Group")
+        // .build();
+
+        // ec2.createSecurityGroup(createSecurityGroupRequest);
+
         RunInstancesRequest runRequest = (RunInstancesRequest) RunInstancesRequest.builder()
                 .instanceType(InstanceType.T2_MEDIUM)
                 .imageId(ami)

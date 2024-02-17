@@ -58,13 +58,20 @@ public class App {
 
     static AWS aws;
 
-    static String S3bucketName = "gfes";
+    static String S3bucketName = "sdjkfhsdjkfhsdjkfhkjbaskjdbasasdasd";
     static String clientManagerQueueUrl = "manager-client";
+    static String manageWorkerSqsQueueName = "manager-workers";
     static String clientKey;
     static int n;
-    public static void main(String... args) {
+    public static void main(String... args) throws InterruptedException {
         aws = AWS.getInstance();
         clientKey = aws.generateUniqueKey();
+        /*System.out.println("purge clientManagerQueueUrl");
+        aws.purgeSQS(clientManagerQueueUrl);
+        System.out.println("purge sleep");
+        Thread.sleep(61000);
+        System.out.println("purge manageWorkerSqsQueueName");
+        aws.purgeSQS(manageWorkerSqsQueueName);*/
         boolean terminate = false;
         if(args[args.length-1].equals("terminate"))
         {
@@ -104,7 +111,7 @@ public class App {
         try {
             aws.createBucketIfNotExists(S3bucketName);
             aws.createSQSIfNotExists(clientManagerQueueUrl);
-            //Instance managerInstance = getRunningManager();
+            Instance managerInstance = getRunningManager();
             for(String inputPath : inputPaths){
                 aws.putInBucket(S3bucketName, new File(inputPath), inputToKeyMapping.get(inputPath));
                 aws.appendMessageToSQS(clientManagerQueueUrl,"input "+clientKey+" " + inputToKeyMapping.get(inputPath), clientKey);//format: "input <clientKey> <S3 file key>"
@@ -132,7 +139,7 @@ public class App {
                     aws.getObjectFromBucket(S3bucketName, fileKey+"done", outputForThisSummary);
                     aws.deleteFromBucket(S3bucketName, fileKey+"done");
                     
-                    totalRecieved ++;
+                    totalRecieved++;
                     // uncomment the next line to get the html file done
                     Output.writeOutputToHTMLFile(outputForThisSummary);
                     }
@@ -159,8 +166,8 @@ public class App {
         "cd /home/ubuntu/java\n" +
         "wget https://corretto.aws/downloads/latest/amazon-corretto-21-x64-linux-jdk.tar.gz\n" +
         "sudo tar -xvf amazon-corretto-21-x64-linux-jdk.tar.gz\n" + //get java
-        "export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.13.1-linux-x64/bin:$PATH\n" + //set java in path
-        "echo 'export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.13.1-linux-x64/bin:$PATH' | tee -a ~/.bashrc\n\n" +//doesnt do anything
+        "export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH\n" + //set java in path
+        "echo 'export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH' | tee -a ~/.bashrc\n\n" +//doesnt do anything
         "source ~/.bashrc\n" +
         "wget https://"+S3bucketName+".s3.us-west-2.amazonaws.com/Manager.jar\n" +
         "java -jar Manager.jar "+n+"\n" +
@@ -197,7 +204,8 @@ public class App {
         int runningManagerIndex = 0;
         if(managers.size() == 0)
         {
-            createManager();
+            return createManager();
+
         }
         else   {
             for(Instance inst : managers) {
@@ -221,13 +229,14 @@ public class App {
                         runningManagerIndex++;
                     }
                 }
+
             }
 
-        
         if(runningManagerIndex == managers.size())
         {
             return createManager();
         }
+
 
 
         return managers.get(runningManagerIndex);
