@@ -118,6 +118,7 @@ public class AWS {
         .visibilityTimeout(timeOut).build());
     }
 
+
     public void deleteFromSQS(String queueUrl, String receipt){
         DeleteMessageRequest req = DeleteMessageRequest.builder().queueUrl(queueUrl).receiptHandle(receipt).build();
         sqs.deleteMessage(req);
