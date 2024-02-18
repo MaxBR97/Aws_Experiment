@@ -64,6 +64,7 @@ public class App {
     static String clientKey;
     static int n;
     public static void main(String... args) throws InterruptedException {
+        System.out.println("local running");
         aws = AWS.getInstance();
         clientKey = aws.generateUniqueKey();
         /*System.out.println("purge clientManagerQueueUrl");

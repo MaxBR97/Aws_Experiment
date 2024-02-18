@@ -68,7 +68,7 @@ public class Manager {
     public static void main(String... args) {
         aws = AWS.getInstance();
         System.out.println("running Manager");
-        aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
+        //aws.putInBucket(S3bucket, "im alive", "manager alive"); //for debugging
        if(args.length < 1){
             System.out.println("not enough arguments");
             System.exit(1);
@@ -253,17 +253,4 @@ public class Manager {
 
 }
 
-
-// #!/bin/bash; 
-//             echo Downloading Worker.jar...;
-//             mkdir /home/ubuntu/java;
-//             cd /home/ubuntu/java;
-//             wget https://corretto.aws/downloads/latest/amazon-corretto-21-x64-linux-jdk.tar.gz\n;
-//             sudo tar -xvf amazon-corretto-21-x64-linux-jdk.tar.gz;
-//             export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH;
-//             echo 'export PATH=/home/ubuntu/java/amazon-corretto-21.0.2.14.1-linux-x64/bin:$PATH' | tee -a ~/.bashrc;
-//             source ~/.bashrc;
-//             wget https://gfes.s3.us-west-2.amazonaws.com/Worker.jar;
-//             java -jar Worker.jar Worker;
-//             echo Running Worker.jar...;
             

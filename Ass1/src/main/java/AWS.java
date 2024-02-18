@@ -151,7 +151,7 @@ public class AWS {
                     .restrictPublicBuckets(false).build())
                     .build());
             s3.putBucketAcl(PutBucketAclRequest.builder().bucket(bucketName).acl(BucketCannedACL.PUBLIC_READ_WRITE).build());
-            //this.putInBucket(bucketName, new File(Path.of("").toAbsolutePath().resolve("Manager.jar").toString()),"Manager.jar");
+            this.putInBucket(bucketName, new File(Path.of("").toAbsolutePath().resolve("Manager.jar").toString()),"Manager.jar");
             this.putInBucket(bucketName, new File(Path.of("").toAbsolutePath().resolve("Worker.jar").toString()),"Worker.jar");
         } catch (S3Exception e) {
             System.out.println(e.getMessage());

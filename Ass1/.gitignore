@@ -30,4 +30,5 @@ bin/
 
 Manager.jar
 Worker.jar
+App.jar
 target
