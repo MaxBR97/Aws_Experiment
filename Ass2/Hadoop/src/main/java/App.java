@@ -32,7 +32,7 @@ public class App {
 
         aws.createBucketIfNotExists(bucketName);
         aws.putInBucket(bucketName, Paths.get("").toAbsolutePath().resolve(inputFile).toFile(), inputFile);
-        aws.putInBucket(bucketName, Paths.get("").toAbsolutePath().resolve("WordCount.jar").toFile(), "WordCount.jar");
+        //aws.putInBucket(bucketName, Paths.get("").toAbsolutePath().resolve("WordCount.jar").toFile(), "WordCount.jar");
 
         // Step 1
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
