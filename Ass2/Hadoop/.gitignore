@@ -6,6 +6,8 @@ out/
 WordCount.jar
 .vscode
 target
+example.csv
+example
 ### Eclipse ###
 .apt_generated
 .classpath

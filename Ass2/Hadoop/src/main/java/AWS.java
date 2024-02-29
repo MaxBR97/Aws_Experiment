@@ -131,6 +131,8 @@ public class AWS {
                     .builder()
                     .key(keyName)
                     .bucket(bucketName)
+                    //.range("bytes=0-5000")
+                    .partNumber(1)
                     .build();
 
             ResponseBytes<GetObjectResponse> objectBytes = s3.getObjectAsBytes(objectRequest);

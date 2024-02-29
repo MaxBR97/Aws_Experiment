@@ -27,18 +27,18 @@ public class App {
         bucketName = aws.bucketName;
         emr = aws.emr;
         
-        String inputFile = "arbix.txt";
-        String outputFile = "output";
 
-        aws.createBucketIfNotExists(bucketName);
-        aws.putInBucket(bucketName, Paths.get("").toAbsolutePath().resolve(inputFile).toFile(), inputFile);
-        //aws.putInBucket(bucketName, Paths.get("").toAbsolutePath().resolve("WordCount.jar").toFile(), "WordCount.jar");
+        //aws.getObjectFromBucket(bucketName, inputFile,  Paths.get("").toAbsolutePath().resolve("example").toString());
+       // System.exit(0);
+//         aws.getObjectFromBucket("datasets.elasticmapreduce", "ngrams/books/20090715/eng-us-all/3gram/data",  Paths.get("").toAbsolutePath().resolve("example").toString());
+//        System.exit(0);
+        
 
         // Step 1
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/WordCount.jar")
                 .withMainClass("Step1")
-                .withArgs(inputFile, outputFile);
+                .withArgs("example_of_2gram_input1", "example_of_2gram_input2" , "output");
 
         StepConfig stepConfig1 = new StepConfig()
                 .withName("Step1")
@@ -68,13 +68,5 @@ public class App {
         RunJobFlowResult runJobFlowResult = emr.runJobFlow(runFlowRequest);
         String jobFlowId = runJobFlowResult.getJobFlowId();
         System.out.println("Ran job flow with id: " + jobFlowId);
-
-        // while(!aws.getObjectFromBucket(bucketName, outputFile, Path.of(".").toAbsolutePath().resolve(outputFile).toString())){
-        //         try{
-        //                 Thread.sleep(3000);
-        //         } catch(Exception e){}
-        // }
-        // aws.deleteFromBucket(bucketName, outputFile);
-        // System.out.println("recieved output file: "+outputFile);
     }
 }
