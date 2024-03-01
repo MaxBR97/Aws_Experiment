@@ -1,6 +1,7 @@
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.StringTokenizer;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
@@ -23,6 +24,7 @@ public class App {
     public static int numberOfInstances = 1;
 
     public static void main(String[]args){
+
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         emr = aws.emr;
@@ -34,7 +36,7 @@ public class App {
 //        System.exit(0);
         
 
-        // Step 1
+        // Step 1 - map reduce
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/WordCount.jar")
                 .withMainClass("Step1")
@@ -44,6 +46,18 @@ public class App {
                 .withName("Step1")
                 .withHadoopJarStep(step1)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
+
+
+        HadoopJarStepConfig step2 = new HadoopJarStepConfig()
+                .withJar("s3://"+bucketName+"/FindCoallocations.jar")
+                .withMainClass("Step2")
+                .withArgs("1830's", "output/part-r-00000" , "output2");
+
+        StepConfig stepConfig2 = new StepConfig()
+                .withName("Step2")
+                .withHadoopJarStep(step2)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
+
 
         //Job flow`
         JobFlowInstancesConfig instances = new JobFlowInstancesConfig()
@@ -59,7 +73,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1)
+                .withSteps(  stepConfig2)
                 .withLogUri("s3://"+bucketName+"")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")

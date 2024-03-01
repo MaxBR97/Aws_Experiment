@@ -113,7 +113,7 @@ public class WordCount {
             matchCount.set(Long.parseLong(itr.nextToken()));
             
             Text ans = new Text();
-            ans.set(word_1.toString() +" "+ word_2.toString() +" "+ decade.toString());
+            ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ decade.toString());
            
             context.write(ans, matchCount);
         }
@@ -139,6 +139,7 @@ public class WordCount {
             for (LongWritable value : values) {
                 sum += value.get();
             }
+            key = new Text(key.toString().replace(' ', '\t'));
             context.write(key, new LongWritable(sum));
             debug(" status - " + context.getStatus());
         }
@@ -170,6 +171,8 @@ public class WordCount {
         
         Configuration conf = new Configuration();
         conf.setQuietMode(false);
+        Job filterStopWords = Job.getInstance(conf, "Filter Stop Words");
+        
         Job job = Job.getInstance(conf, "Word Count");
         job.setJarByClass(WordCount.class);
         job.setMapperClass(MapperClass.class);
@@ -220,13 +223,3 @@ public class WordCount {
     }
 
 }
-
-
-
-
- // File myFile = new File(Paths.get("").toAbsolutePath().resolve("testtt").toString());
-            
-            // OutputStream os = new FileOutputStream(myFile);
-            // os.write(("map:  key - "+key.toString() +" , value - "+value.toString()+" , context - "+context.toString() + " , split - "+context.getInputSplit()).getBytes());
-            // os.close();
-            // aws.putInBucket(bucketName, new File(Paths.get("").toAbsolutePath().resolve("testtt").toString()), "testtt");
