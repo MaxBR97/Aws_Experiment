@@ -1,7 +1,12 @@
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.StringTokenizer;
+
+import org.apache.hadoop.mapred.Task.Counter;
+import org.apache.hadoop.mapreduce.Job;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
@@ -28,19 +33,18 @@ public class App {
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         emr = aws.emr;
-        
+        System.out.println(aws.getObjectFromBucket(bucketName, "sfd"));
+        System.exit(0);
 
-        //aws.getObjectFromBucket(bucketName, inputFile,  Paths.get("").toAbsolutePath().resolve("example").toString());
-       // System.exit(0);
 //         aws.getObjectFromBucket("datasets.elasticmapreduce", "ngrams/books/20090715/eng-us-all/3gram/data",  Paths.get("").toAbsolutePath().resolve("example").toString());
 //        System.exit(0);
         
 
         // Step 1 - map reduce
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
-                .withJar("s3://"+bucketName+"/WordCount.jar")
+                .withJar("s3://"+bucketName+"/ReduceDecades.jar")
                 .withMainClass("Step1")
-                .withArgs("example_of_2gram_input1", "example_of_2gram_input2" , "output");
+                .withArgs("example_of_2gram_input1", "example_of_2gram_input2" , "step1_output");
 
         StepConfig stepConfig1 = new StepConfig()
                 .withName("Step1")
@@ -49,9 +53,9 @@ public class App {
 
 
         HadoopJarStepConfig step2 = new HadoopJarStepConfig()
-                .withJar("s3://"+bucketName+"/FindCoallocations.jar")
+                .withJar("s3://"+bucketName+"/CountWords.jar")
                 .withMainClass("Step2")
-                .withArgs("1830's", "output/part-r-00000" , "output2");
+                .withArgs("all", "step1_output/part-r-00000" , "step2_output2");
 
         StepConfig stepConfig2 = new StepConfig()
                 .withName("Step2")
@@ -73,7 +77,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(  stepConfig2)
+                .withSteps(  stepConfig1, stepConfig2)
                 .withLogUri("s3://"+bucketName+"")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")

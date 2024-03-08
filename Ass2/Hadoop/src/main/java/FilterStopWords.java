@@ -34,7 +34,6 @@ public class FilterStopWords {
 
     public static String bucketName;
     public static AWS aws;
-    public static boolean debugMode = true;
 
     public static class MapperClass extends Mapper<LongWritable, Text, Text , LongWritable> {
         private static LongWritable one = new LongWritable(1);
