@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-public class JoinW1 {
+public class CalculatePMI {
 
     public static String bucketName;
     public static AWS aws;
@@ -57,13 +57,11 @@ public class JoinW1 {
             word_1.set(itr.nextToken());
             word_2.set(itr.nextToken());
             if(itr.countTokens() >= 2){
-                years.set(itr.nextToken());
-                matchCount.set(Long.parseLong(itr.nextToken())); 
-                context.write(word_1, value);
+                context.write(word_2, value);
             } else{
-                matchCount.set(Long.parseLong(itr.nextToken())); 
-                if(!word_1.equals(CountWords.uniqueWord))
-                    context.write(word_1, value);
+                 
+                if(!word_2.equals(CountWords.uniqueWord))
+                    context.write(word_2, value);
             }
             }catch(Exception e){
             e.printStackTrace();
@@ -85,10 +83,11 @@ public class JoinW1 {
     public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
         String decade;
         long N;
-        double sumPMI;
+        double sumPMI = 0.0;
+        Configuration config;
         
         public void setup(Context context) {
-            Configuration config = context.getConfiguration();
+            config = context.getConfiguration();
             decade = config.getStrings("decade")[0];
             N = config.getLong("N", -1);
             sumPMI = config.getDouble("sumPMI", -1);
@@ -99,39 +98,47 @@ public class JoinW1 {
             Text w1 = new Text();
             Text w2 = new Text();
             List<Text> arr = new ArrayList<Text>();
-            long c_w1 = 0;
+            long c_w2 = 0;
             for(Text value: values){
                 try{
                 StringTokenizer str = new StringTokenizer(value.toString());
                 w1 = new Text(str.nextToken());
                 w2 = new Text(str.nextToken());
                 if(str.countTokens() == 1){ // c(w1)
-                    c_w1 = Long.parseLong(str.nextToken());
+                    c_w2 = Long.parseLong(str.nextToken());
                 }
                 else{ // an entire entry
                     arr.add(value);
                 }
                 }catch(Exception e){
-                e.printStackTrace();
-                throw new IOException("key: "+key.toString() +" value: "+value.toString());
+                    e.printStackTrace();
+                    throw new IOException("key: "+key.toString() +" value: "+value.toString());
                 }
             }
             for( Text value : arr){
                 try{
-                Text ans = new Text("w1:"+c_w1);
-                context.write(value, ans);
-                 }catch(Exception e){
+                StringTokenizer str = new StringTokenizer(value.toString());
+                w1 = new Text(str.nextToken());
+                w2 = new Text(str.nextToken());
+                Text years = new Text(str.nextToken());
+                Text decadeCount = new Text(str.nextToken());
+                Text w1_count = new Text(str.nextToken());
+                double npmi = npmi(Long.parseLong(decadeCount.toString()), Long.parseLong(w1_count.toString().split(":")[1]), c_w2, N);
+                sumPMI += npmi;
+                context.write(value, new Text(String.valueOf(npmi)));
+                }catch(Exception e){
                 e.printStackTrace();
                 throw new IOException("key: "+key.toString() +" value: "+value.toString());
                 }
             }
+            context.getCounter("sumPMI", decade).increment((long)(sumPMI * 1000D));
         }
     }
 
 
-    //Receives n args: 0 - Step3 1 - inputFolder, 2 - outputFolder
+    //Receives n args: 0 - Step3 1 - inputFolderJoinedW1,2 -inputFolderCountW ,3 - N'sInputFolder,  4 - outputFolder
     public static void main(String[] args) throws Exception {
-        System.out.println("[DEBUG] STEP 3 started!");
+        System.out.println("[DEBUG] STEP 4 started!");
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         System.out.println("args: ");
@@ -139,11 +146,13 @@ public class JoinW1 {
             System.out.print("args["+i+"]"+" : "+args[i] +", ");
         }
         System.out.println("\n");
-        String inputFolder = args[1];
-        String outputFolder = args[2];
+        String inputFolderJoinedW1 = args[1];
+        String inputFolderCountW = args[2];
+        String NinputFolder = args[2];
+        String outputFolder = args[3];
         
         String decade = "1400's"; // probably doesn't exists, but it's okay.
-        String N_string = aws.getObjectFromBucket(bucketName, inputFolder+"/"+"N_"+decade+".txt");
+        String N_string = aws.getObjectFromBucket(bucketName, NinputFolder+"/"+"N_"+decade+".txt");
         while(decade != null) {
         if(N_string == null){
             System.out.println(N_string +" N_string is null");
@@ -154,25 +163,38 @@ public class JoinW1 {
         
         Configuration conf = new Configuration();
         conf.setQuietMode(false);
-        conf.setStrings("decade",decade);
-        conf.setLong("N", N);
-        conf.setDouble("sumPMI", 0.0D);
         Job job = Job.getInstance(conf, "Calculate PMIs " + decade);
-        job.setJarByClass(JoinW1.class);
+        job.setJarByClass(CalculatePMI.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
         job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(LongWritable.class);
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(LongWritable.class);
-        FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolder+"/"+decade+"_wordCounts.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFolder+"/"+decade+"_JoinW1.txt"));
-        
+        job.setOutputValueClass(Text.class);
+        FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderJoinedW1+"/"+decade+"_JoinW1.txt"));
+        FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountW+"/"+decade+"_wordCounts.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFolder+"/"+decade+"_PMIs.txt"));
+        conf.setStrings("decade",decade);
+        conf.setLong("N", N);
+        conf.setDouble("sumPMI", 0.0D);
+        job.getCounters().getGroup("sumPMI").findCounter(decade);
         job.waitForCompletion(true);
         job.monitorAndPrintJob();
-        decade = getNextDecade(decade);
+        double sumPMI = ((double)job.getCounters().getGroup("sumPMI").findCounter(decade).getValue()) / 1000.0D;
+        String fileName = Paths.get("").toAbsolutePath().resolve("sumPMI_"+decade+".txt").toString();
+        try {
+            FileWriter fileWriter = new FileWriter(fileName);
+            fileWriter.write(sumPMI + "");
+            fileWriter.close();
+            System.out.println("String has been written to file");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        aws.putInBucket(bucketName, Paths.get("").toAbsolutePath().resolve(fileName).toFile(), outputFolder+"/sumPMI_"+decade+".txt"); 
+        //System.out.println("calculated sumPMI: "+ CalculatePMI.getN());
+         decade = getNextDecade(decade);
         } 
 
     }
@@ -184,6 +206,20 @@ public class JoinW1 {
             return null;
         else
             return String.valueOf(newDecade) + "'s";
+    }
+
+    public static double npmi(long w1_w2 ,long w1,long w2, long n){
+        double nominator = pmi(w1_w2, w1, w2, n);
+        double denominator = (-1) * Math.log(p(w1_w2, n));
+        return (nominator/denominator);
+    }
+
+    public static double pmi(long w1_w2,long w1, long w2, long n){
+        return Math.log(w1_w2) + Math.log(n) - Math.log(w1) - Math.log(w2);
+    }
+
+    public static double p(long w1_w2, long n){
+        return w1_w2/n;
     }
 
 }
