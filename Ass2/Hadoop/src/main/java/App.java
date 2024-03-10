@@ -6,7 +6,9 @@ import java.nio.file.Paths;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.mapred.Task.Counter;
+import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
@@ -33,8 +35,8 @@ public class App {
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         emr = aws.emr;
-        System.out.println(aws.getObjectFromBucket(bucketName, "sfd"));
-        System.exit(0);
+
+        //System.exit(0);
 
 //         aws.getObjectFromBucket("datasets.elasticmapreduce", "ngrams/books/20090715/eng-us-all/3gram/data",  Paths.get("").toAbsolutePath().resolve("example").toString());
 //        System.exit(0);
@@ -44,7 +46,7 @@ public class App {
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/ReduceDecades.jar")
                 .withMainClass("Step1")
-                .withArgs("example_of_2gram_input1", "example_of_2gram_input2" , "step1_output");
+                .withArgs("1960's","example_of_2gram_input1", "example_of_2gram_input2" , "step1_output");
 
         StepConfig stepConfig1 = new StepConfig()
                 .withName("Step1")
@@ -55,11 +57,31 @@ public class App {
         HadoopJarStepConfig step2 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/CountWords.jar")
                 .withMainClass("Step2")
-                .withArgs("all", "step1_output/part-r-00000" , "step2_output2");
+                .withArgs("all", "step1_output" , "step2_output");
 
         StepConfig stepConfig2 = new StepConfig()
                 .withName("Step2")
                 .withHadoopJarStep(step2)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
+        
+        HadoopJarStepConfig step3 = new HadoopJarStepConfig()
+                .withJar("s3://"+bucketName+"/JoinW1.jar")
+                .withMainClass("Step3")
+                .withArgs("step1_output" , "step2_output" , "step3_output");
+
+        StepConfig stepConfig3 = new StepConfig()
+                .withName("Step3")
+                .withHadoopJarStep(step3)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
+
+        HadoopJarStepConfig step4 = new HadoopJarStepConfig()
+                .withJar("s3://"+bucketName+"/CalculatePMI.jar")
+                .withMainClass("Step4")
+                .withArgs("step3_output","step2_output","step2_output", "step4_output");
+
+        StepConfig stepConfig4 = new StepConfig()
+                .withName("Step4")
+                .withHadoopJarStep(step4)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
 
 
@@ -77,7 +99,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(  stepConfig1, stepConfig2)
+                .withSteps(/*stepConfig1, stepConfig2,*/ stepConfig3 , stepConfig4)
                 .withLogUri("s3://"+bucketName+"")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")

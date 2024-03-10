@@ -12,6 +12,7 @@ import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapred.Task.Counter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.join.TupleWritable;
+import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -38,12 +39,20 @@ public class JoinW1 {
 
     public static String bucketName;
     public static AWS aws;
-
+    public static String uniqueWord = "43uireoaugibghui4reagf";
+    
     public static class MapperClass extends Mapper<LongWritable, Text, Text , Text> {
         private Text word_1;
         private Text word_2;
         private Text years;
         private LongWritable matchCount;
+        private int countTokens = -1;
+        private String decade;
+
+        public void setup(Context context) {
+            Configuration config = context.getConfiguration();
+            decade = config.getStrings("decade")[0];
+        }
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
@@ -56,18 +65,20 @@ public class JoinW1 {
             StringTokenizer itr = new StringTokenizer(value.toString());
             word_1.set(itr.nextToken());
             word_2.set(itr.nextToken());
-            if(itr.countTokens() >= 2){
+            countTokens = itr.countTokens();
+            if(countTokens >= 2){
                 years.set(itr.nextToken());
                 matchCount.set(Long.parseLong(itr.nextToken())); 
-                context.write(word_1, value);
+                if(years.toString().equals(decade))
+                    context.write(word_1, value);
             } else{
                 matchCount.set(Long.parseLong(itr.nextToken())); 
-                if(!word_1.equals(CountWords.uniqueWord))
+                if(!word_1.toString().equals(uniqueWord))// w1 uniqueWord
                     context.write(word_1, value);
             }
             }catch(Exception e){
             e.printStackTrace();
-            throw new IOException("key: "+key.toString() +" value: "+value.toString());
+            throw new IOException("key: "+key.toString() +" value: "+value.toString() +" count tokens: "+countTokens +" the last stacktrace: "+e.getMessage());
             }
             
         }
@@ -99,37 +110,51 @@ public class JoinW1 {
             Text w1 = new Text();
             Text w2 = new Text();
             List<Text> arr = new ArrayList<Text>();
-            long c_w1 = 0;
+            List<Text> debugging = new ArrayList<Text>();
+            long c_w1 = -1;
             for(Text value: values){
+                debugging.add(value);
                 try{
                 StringTokenizer str = new StringTokenizer(value.toString());
+                if(str.countTokens() == 1){
+                    throw new Exception("special exception1. countTokens: "+str.countTokens() + " c_w1: " + c_w1);
+                    //context.write(key, value);
+                    //continue;
+                }
                 w1 = new Text(str.nextToken());
                 w2 = new Text(str.nextToken());
                 if(str.countTokens() == 1){ // c(w1)
+
                     c_w1 = Long.parseLong(str.nextToken());
+                    continue;
+                }
+                else if(value.toString().contains(uniqueWord)){
+                    throw new Exception("special exception2. countTokens: "+str.countTokens() + " c_w1: " + c_w1);
                 }
                 else{ // an entire entry
+                    if(value.toString().contains(uniqueWord))
+                        throw new Exception("special exception3. countTokens: "+str.countTokens() + " c_w1: " + c_w1);
                     arr.add(value);
                 }
                 }catch(Exception e){
-                e.printStackTrace();
-                throw new IOException("key: "+key.toString() +" value: "+value.toString());
+                    throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
                 }
             }
-            for( Text value : arr){
-                try{
-                Text ans = new Text("w1:"+c_w1);
-                context.write(value, ans);
-                 }catch(Exception e){
-                e.printStackTrace();
-                throw new IOException("key: "+key.toString() +" value: "+value.toString());
+                for( Text value : arr){
+                    try{
+                        if(value.toString().contains(uniqueWord))
+                            throw new Exception("special exception4. arr length: " +arr.size()+ " c_w1: " + c_w1);
+                        Text ans = new Text("w1:"+c_w1);
+                        context.write(value, ans);
+                    }catch(Exception e){
+                        throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
+                    }
                 }
-            }
         }
     }
 
 
-    //Receives n args: 0 - Step3 1 - inputFolder, 2 - outputFolder
+    //Receives n args: 0 - Step3 1 - inputFolderReducedDecades , 2 - inputFolderCountWords, 3 - outputFolder
     public static void main(String[] args) throws Exception {
         System.out.println("[DEBUG] STEP 3 started!");
         aws = AWS.getInstance();
@@ -139,14 +164,16 @@ public class JoinW1 {
             System.out.print("args["+i+"]"+" : "+args[i] +", ");
         }
         System.out.println("\n");
-        String inputFolder = args[1];
-        String outputFolder = args[2];
+        String inputFolderReducesDecades = args[1];
+        String inputFolderCountWords = args[2];
+        String outputFolder = args[3];
         
-        String decade = "1400's"; // probably doesn't exists, but it's okay.
-        String N_string = aws.getObjectFromBucket(bucketName, inputFolder+"/"+"N_"+decade+".txt");
+        String decade = "1950's"; // probably doesn't exists, but it's okay.
         while(decade != null) {
+        String N_string = aws.getObjectFromBucket(bucketName, inputFolderCountWords+"/"+"N_"+decade+".txt");
         if(N_string == null){
-            System.out.println(N_string +" N_string is null");
+            System.out.println(N_string +" N_string for decade "+decade);
+            decade = getNextDecade(decade);
             continue;
         }
         long N = Long.parseLong(N_string);
@@ -161,15 +188,17 @@ public class JoinW1 {
         job.setJarByClass(JoinW1.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
-        job.setCombinerClass(ReducerClass.class);
+        //job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(LongWritable.class);
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(LongWritable.class);
-        FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolder+"/"+decade+"_wordCounts.txt"));
+        job.setOutputValueClass(Text.class);
+     
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountWords+"/"+decade+"_wordCounts.txt/part-r-00000"));
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderReducesDecades+"/"+decade+"/part-r-00000"));
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFolder+"/"+decade+"_JoinW1.txt"));
-        
+        CombineFileInputFormat.setMaxInputSplitSize(job, 500000000); // 500MB
         job.waitForCompletion(true);
         job.monitorAndPrintJob();
         decade = getNextDecade(decade);

@@ -40,28 +40,33 @@ public class ReduceDecades {
         
         private Text word_1;
         private Text word_2;
-        private Text decade;
+        private Text year;
         private LongWritable matchCount;
+        private String decade;
+
+        public void setup(Context context) {
+            Configuration config = context.getConfiguration();
+            decade = config.getStrings("decade")[0];
+        }
         
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
-            debug("map:  key - "+key.toString() +" , value - "+value.toString()+" , context - "+context.toString() + " , split - "+context.getInputSplit());
             word_1 = new Text();
             word_2 = new Text();
-            decade = new Text();
+            year = new Text();
             matchCount = new LongWritable();
 
             StringTokenizer itr = new StringTokenizer(value.toString());
             word_1.set(itr.nextToken());
             word_2.set(itr.nextToken());
-            decade.set((itr.nextToken().substring(0, 3)).concat("0's"));
+            year.set((itr.nextToken().substring(0, 3)).concat("0's"));
             matchCount.set(Long.parseLong(itr.nextToken()));
             
             Text ans = new Text();
-            ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ decade.toString());
-           
-            context.write(ans, matchCount);
+            ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ year.toString());
+           if(year.toString().equals(decade))
+                context.write(ans, matchCount);
         }
     }
 
@@ -69,7 +74,6 @@ public class ReduceDecades {
         
         @Override
         public int getPartition(Text key, LongWritable value, int numPartitions) {
-            debug("key - " + key.toString() + " value - " + value.toString() + " numPartitions - " + numPartitions + "returns - " + (key.hashCode() % numPartitions) );
             String[] line = key.toString().split(" ");
             return (line[0] +" "+ line[1]).hashCode() % numPartitions;
         }
@@ -78,8 +82,6 @@ public class ReduceDecades {
     public static class ReducerClass extends Reducer<Text,LongWritable,Text,LongWritable> {
         @Override
         public void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException,  InterruptedException {
-            System.out.println("check");
-            debug("reduce:  key - "+key.toString() +" , context - "+context.toString() +" status - " + context.getStatus());
             
             long sum = 0;
             for (LongWritable value : values) {
@@ -87,12 +89,11 @@ public class ReduceDecades {
             }
             key = new Text(key.toString().replace(' ', '\t'));
             context.write(key, new LongWritable(sum));
-            debug(" status - " + context.getStatus());
         }
     }
 
 
-    //Receives n args: 0 - Step1 1 - inputFileName1, 2 - inputFileName2, ....... n-1 inputFileName(n-1) , n outputFileName
+    //Receives n args: 0 - Step1 ,1 - starting decade ,2 - inputFileName1, 3 - inputFileName2, ....... n-1 inputFileName(n-2) , n outputFileFolder
     public static void main(String[] args) throws Exception {
         System.out.println("[DEBUG] STEP 1 started!");
         aws = AWS.getInstance();
@@ -103,23 +104,26 @@ public class ReduceDecades {
             System.out.print("args["+i+"]"+" : "+args[i] +", ");
         }
         System.out.println("\n");
-        String[] inputFileKey = new String[args.length-2];
+        String[] inputFileKey = new String[args.length-3];
         String outputFileKey = args[args.length-1];
-        for(int i=1; i<args.length - 1;i++){
-           inputFileKey[i-1] = args[i];
+        for(int i=2; i<args.length - 1;i++){
+           inputFileKey[i-2] = args[i];
         }
 
         for(int i=0; i<inputFileKey.length;i++){
             System.out.println("input: "+inputFileKey[i]);
          }
          System.out.println("out: "+outputFileKey);
-
-        
+         
+        String decade = args[1];
+        Job job = null;
+        while(decade != null){
         Configuration conf = new Configuration();
         conf.setQuietMode(false);
+        conf.setStrings("decade", decade);
         Job filterStopWords = Job.getInstance(conf, "Reduce Decades");
         
-        Job job = Job.getInstance(conf, "Reduce Decades");
+        job = Job.getInstance(conf, "Reduce Decades");
         job.setJarByClass(ReduceDecades.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
@@ -141,31 +145,27 @@ public class ReduceDecades {
             FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
         }
 
-        FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFileKey));
+        FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFileKey+"/"+decade));
         
-        job.waitForCompletion(true);
+        job.submit();
         
         job.monitorAndPrintJob();
+        decade = getNextDecade(decade);
+        }
+        while(!job.isComplete()){
+            Thread.sleep(2000);
+        }
+        System.exit(0);
         
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 
-    public static void debug(String message){
-        if(debugMode)
-            System.out.println(message);
-    }
-
-    public static double npmi(String word1, String word2){
-        double nominator = pmi(word1, word2);
-        double denominator = (-1) * Math.log(p(word1, word2));
-        return (nominator/denominator);
-    }
-
-    public static double pmi(String w1, String w2){
-        return 1;
-    }
-    public static double p(String w1, String w2){
-       return 1;
+    public static String getNextDecade(String decade){
+        String cur =  decade.substring(0, 4);
+        int newDecade = Integer.parseInt(cur) + 10;
+        if(newDecade == 2030)
+            return null;
+        else
+            return String.valueOf(newDecade) + "'s";
     }
 
 }

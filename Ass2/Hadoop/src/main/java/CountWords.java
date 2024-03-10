@@ -84,12 +84,13 @@ public class CountWords {
             word_1.set(itr.nextToken());
             word_2.set(itr.nextToken());
             years.set(itr.nextToken());
-            matchCount.set(Long.parseLong(itr.nextToken())); 
+            long longMatchCount = Long.parseLong(itr.nextToken());
+            matchCount.set(longMatchCount); 
             
             if(years.toString().equals(decade)){
                 Text countN = new Text(uniqueWord);
 
-                context.write(countN, matchCount); // used for counting N (number of words)
+                context.write(countN, new LongWritable(longMatchCount*2)); // used for counting N (number of words)
                 context.write (new Text(word_1.toString()+"\t"+uniqueWord), matchCount); // used for claculating c(w1)
                 context.write (new Text(uniqueWord+"\t"+word_2.toString()), matchCount);
                 //throw new IOException("exception at mapper. key: "+key.toString()+" value: "+value.toString() +" word_1: "+word_1.toString());
@@ -133,15 +134,13 @@ public class CountWords {
                 for (LongWritable value : values) {
                         try{
                             sum += value.get();
-                            context.write(key, new LongWritable(sum));
                             
                         }catch (Exception e){
                             throw new IOException ("the key: "+key.toString()+" the value: "+value+ " sum: "+sum );
                         }
                     
-                    }
-                
-              
+                }
+                context.write(key, new LongWritable(sum));  
             }
            
         }
@@ -159,14 +158,14 @@ public class CountWords {
             System.out.print("args["+i+"]"+" : "+args[i] +", ");
         }
         System.out.println("\n");
-        String[] inputFileKey = new String[args.length-3];
+        String[] inputFolder = new String[args.length-3];
         String outputFileKey = args[args.length-1];
         for(int i=2; i<args.length - 1;i++){
-           inputFileKey[i-2] = args[i];
+           inputFolder[i-2] = args[i];
         }
         if(args[1].equals("all")){
             allDecades = true;
-            CountWords.setDecade("1960's"); // starting decade
+            CountWords.setDecade("1400's"); // starting decade
         }
         else
         {
@@ -176,8 +175,8 @@ public class CountWords {
 
         do {
         System.out.println("decade: "+CountWords.getDecade());
-        for(int i=0; i<inputFileKey.length;i++){
-            System.out.println("input: "+inputFileKey[i]);
+        for(int i=0; i<inputFolder.length;i++){
+            System.out.println("input: "+inputFolder[i]);
          }
          System.out.println("output: "+outputFileKey);
 
@@ -196,8 +195,8 @@ public class CountWords {
         job.setMapOutputValueClass(LongWritable.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(LongWritable.class);
-        for(int i=0; i<inputFileKey.length; i++){
-            FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
+        for(int i=0; i<inputFolder.length; i++){
+            FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolder[i]+"/"+decade+"/part-r-00000"));
         }
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFileKey+"/"+decade+"_wordCounts.txt"));
         
@@ -230,7 +229,7 @@ public class CountWords {
     public static String getNextDecade(String decade){
         String cur =  decade.substring(0, 4);
         int newDecade = Integer.parseInt(cur) + 10;
-        if(newDecade == 2000)
+        if(newDecade == 2030)
             return null;
         else
             return String.valueOf(newDecade) + "'s";

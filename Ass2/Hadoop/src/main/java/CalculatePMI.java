@@ -12,6 +12,7 @@ import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapred.Task.Counter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.join.TupleWritable;
+import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -38,6 +39,7 @@ public class CalculatePMI {
 
     public static String bucketName;
     public static AWS aws;
+    public static String uniqueWord = "43uireoaugibghui4reagf";
 
     public static class MapperClass extends Mapper<LongWritable, Text, Text , Text> {
         private Text word_1;
@@ -60,12 +62,12 @@ public class CalculatePMI {
                 context.write(word_2, value);
             } else{
                  
-                if(!word_2.equals(CountWords.uniqueWord))
+                if(!word_2.toString().equals(uniqueWord))
                     context.write(word_2, value);
             }
             }catch(Exception e){
             e.printStackTrace();
-            throw new IOException("key: "+key.toString() +" value: "+value.toString());
+            throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
             }
             
         }
@@ -84,10 +86,11 @@ public class CalculatePMI {
         String decade;
         long N;
         double sumPMI = 0.0;
-        Configuration config;
+        Configuration config = null;
         
         public void setup(Context context) {
             config = context.getConfiguration();
+            config.getStrings("decade");
             decade = config.getStrings("decade")[0];
             N = config.getLong("N", -1);
             sumPMI = config.getDouble("sumPMI", -1);
@@ -98,21 +101,24 @@ public class CalculatePMI {
             Text w1 = new Text();
             Text w2 = new Text();
             List<Text> arr = new ArrayList<Text>();
-            long c_w2 = 0;
+            long c_w2 = -1;
             for(Text value: values){
                 try{
-                StringTokenizer str = new StringTokenizer(value.toString());
-                w1 = new Text(str.nextToken());
-                w2 = new Text(str.nextToken());
-                if(str.countTokens() == 1){ // c(w1)
-                    c_w2 = Long.parseLong(str.nextToken());
-                }
-                else{ // an entire entry
-                    arr.add(value);
-                }
+                    StringTokenizer str = new StringTokenizer(value.toString());
+                    if(str.countTokens() == 1){
+                        context.write(key, value);
+                        continue;
+                    }
+                    w1 = new Text(str.nextToken());
+                    w2 = new Text(str.nextToken());
+                    if(str.countTokens() == 1){ // c(w1)
+                        c_w2 = Long.parseLong(str.nextToken());
+                    }
+                    else{ // an entire entry
+                        arr.add(value);
+                    }
                 }catch(Exception e){
-                    e.printStackTrace();
-                    throw new IOException("key: "+key.toString() +" value: "+value.toString());
+                    throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
                 }
             }
             for( Text value : arr){
@@ -127,8 +133,7 @@ public class CalculatePMI {
                 sumPMI += npmi;
                 context.write(value, new Text(String.valueOf(npmi)));
                 }catch(Exception e){
-                e.printStackTrace();
-                throw new IOException("key: "+key.toString() +" value: "+value.toString());
+                    throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
                 }
             }
             context.getCounter("sumPMI", decade).increment((long)(sumPMI * 1000D));
@@ -148,14 +153,16 @@ public class CalculatePMI {
         System.out.println("\n");
         String inputFolderJoinedW1 = args[1];
         String inputFolderCountW = args[2];
-        String NinputFolder = args[2];
-        String outputFolder = args[3];
+        String NinputFolder = args[3];
+        String outputFolder = args[4];
         
         String decade = "1400's"; // probably doesn't exists, but it's okay.
-        String N_string = aws.getObjectFromBucket(bucketName, NinputFolder+"/"+"N_"+decade+".txt");
+        
         while(decade != null) {
-        if(N_string == null){
-            System.out.println(N_string +" N_string is null");
+        String N_string = aws.getObjectFromBucket(bucketName, NinputFolder+"/"+"N_"+decade+".txt");
+        if(N_string == null || decade == null){
+            System.out.println(N_string +" N_string for decade "+decade);
+            decade = getNextDecade(decade);
             continue;
         }
         long N = Long.parseLong(N_string);
@@ -163,23 +170,24 @@ public class CalculatePMI {
         
         Configuration conf = new Configuration();
         conf.setQuietMode(false);
+        conf.setStrings("decade",decade);
+        conf.setLong("N", N);
+        conf.setDouble("sumPMI", 0.0D);
         Job job = Job.getInstance(conf, "Calculate PMIs " + decade);
         job.setJarByClass(CalculatePMI.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
-        job.setCombinerClass(ReducerClass.class);
+        //job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-        FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderJoinedW1+"/"+decade+"_JoinW1.txt"));
-        FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountW+"/"+decade+"_wordCounts.txt"));
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderJoinedW1+"/"+decade+"_JoinW1.txt/part-r-00000"));
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountW+"/"+decade+"_wordCounts.txt/part-r-00000"));
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFolder+"/"+decade+"_PMIs.txt"));
-        conf.setStrings("decade",decade);
-        conf.setLong("N", N);
-        conf.setDouble("sumPMI", 0.0D);
-        job.getCounters().getGroup("sumPMI").findCounter(decade);
+        CombineFileInputFormat.setMaxInputSplitSize(job, 500000000);//500MB
+        
         job.waitForCompletion(true);
         job.monitorAndPrintJob();
         double sumPMI = ((double)job.getCounters().getGroup("sumPMI").findCounter(decade).getValue()) / 1000.0D;
@@ -202,7 +210,7 @@ public class CalculatePMI {
     public static String getNextDecade(String decade){
         String cur =  decade.substring(0, 4);
         int newDecade = Integer.parseInt(cur) + 10;
-        if(newDecade == 2040)
+        if(newDecade == 2030)
             return null;
         else
             return String.valueOf(newDecade) + "'s";
