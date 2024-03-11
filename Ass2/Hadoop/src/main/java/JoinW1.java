@@ -105,15 +105,20 @@ public class JoinW1 {
             sumPMI = config.getDouble("sumPMI", -1);
         }
 
+    //     abc dfeee 1960 2
+    //     abc getGroup 1960 4
+    //     abc 43uireoaugibghui4reagf 1528
+    //     abc grereg 1960 23
+        
+
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
             Text w1 = new Text();
             Text w2 = new Text();
             List<Text> arr = new ArrayList<Text>();
-            List<Text> debugging = new ArrayList<Text>();
+
             long c_w1 = -1;
             for(Text value: values){
-                debugging.add(value);
                 try{
                 StringTokenizer str = new StringTokenizer(value.toString());
                 if(str.countTokens() == 1){
@@ -140,6 +145,7 @@ public class JoinW1 {
                     throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
                 }
             }
+           
                 for( Text value : arr){
                     try{
                         if(value.toString().contains(uniqueWord))
@@ -199,6 +205,7 @@ public class JoinW1 {
         CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderReducesDecades+"/"+decade+"/part-r-00000"));
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFolder+"/"+decade+"_JoinW1.txt"));
         CombineFileInputFormat.setMaxInputSplitSize(job, 500000000); // 500MB
+        CombineFileInputFormat.setMinInputSplitSize(job, 400000000); //400MB
         job.waitForCompletion(true);
         job.monitorAndPrintJob();
         decade = getNextDecade(decade);
