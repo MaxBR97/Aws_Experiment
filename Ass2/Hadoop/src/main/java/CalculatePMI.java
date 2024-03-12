@@ -85,7 +85,6 @@ public class CalculatePMI {
     public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
         String decade;
         long N;
-        double sumPMI = 0.0;
         Configuration config = null;
         
         public void setup(Context context) {
@@ -93,11 +92,11 @@ public class CalculatePMI {
             config.getStrings("decade");
             decade = config.getStrings("decade")[0];
             N = config.getLong("N", -1);
-            sumPMI = config.getDouble("sumPMI", -1);
         }
 
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
+            double sumPMI = 0.0;
             Text w1 = new Text();
             Text w2 = new Text();
             List<Text> arr = new ArrayList<Text>();
@@ -105,17 +104,14 @@ public class CalculatePMI {
             for(Text value: values){
                 try{
                     StringTokenizer str = new StringTokenizer(value.toString());
-                    if(str.countTokens() == 1){
-                        context.write(key, value);
-                        continue;
-                    }
                     w1 = new Text(str.nextToken());
                     w2 = new Text(str.nextToken());
-                    if(str.countTokens() == 1){ // c(w1)
+                    if(str.countTokens() == 1){ // c(w2)
                         c_w2 = Long.parseLong(str.nextToken());
                     }
                     else{ // an entire entry
-                        arr.add(value);
+                        Text temp = new Text(value.toString());
+                        arr.add(temp);
                     }
                 }catch(Exception e){
                     throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
@@ -129,14 +125,15 @@ public class CalculatePMI {
                 Text years = new Text(str.nextToken());
                 Text decadeCount = new Text(str.nextToken());
                 Text w1_count = new Text(str.nextToken());
+                Text w2_count  = new Text(String.valueOf(c_w2));
                 double npmi = npmi(Long.parseLong(decadeCount.toString()), Long.parseLong(w1_count.toString().split(":")[1]), c_w2, N);
                 sumPMI += npmi;
-                context.write(value, new Text(String.valueOf(npmi)));
+                context.write(value, new Text("w2:"+String.valueOf(c_w2)+"\t"+String.valueOf(npmi)));
                 }catch(Exception e){
                     throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
                 }
             }
-            context.getCounter("sumPMI", decade).increment((long)(sumPMI * 1000D));
+            context.getCounter("sumPMI", decade).increment((long)(sumPMI * 1000.0D));
         }
     }
 
@@ -156,7 +153,7 @@ public class CalculatePMI {
         String NinputFolder = args[3];
         String outputFolder = args[4];
         
-        String decade = "1400's"; // probably doesn't exists, but it's okay.
+        String decade = "1490's"; // probably doesn't exists, but it's okay.
         
         while(decade != null) {
         String N_string = aws.getObjectFromBucket(bucketName, NinputFolder+"/"+"N_"+decade+".txt");
@@ -190,7 +187,8 @@ public class CalculatePMI {
         
         job.waitForCompletion(true);
         job.monitorAndPrintJob();
-        double sumPMI = ((double)job.getCounters().getGroup("sumPMI").findCounter(decade).getValue()) / 1000.0D;
+        double sumPMI = ((double)(job.getCounters().getGroup("sumPMI").findCounter(decade).getValue())) / 1000.0D;
+        System.out.println("recieved counter value: "+(job.getCounters().getGroup("sumPMI").findCounter(decade).getValue())+ " for decade: "+decade);
         String fileName = Paths.get("").toAbsolutePath().resolve("sumPMI_"+decade+".txt").toString();
         try {
             FileWriter fileWriter = new FileWriter(fileName);
@@ -227,7 +225,7 @@ public class CalculatePMI {
     }
 
     public static double p(long w1_w2, long n){
-        return w1_w2/n;
+        return ((double)w1_w2)/ ((double)n);
     }
 
 }

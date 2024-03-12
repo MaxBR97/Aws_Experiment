@@ -104,42 +104,26 @@ public class JoinW1 {
             N = config.getLong("N", -1);
             sumPMI = config.getDouble("sumPMI", -1);
         }
-
-    //     abc dfeee 1960 2
-    //     abc getGroup 1960 4
-    //     abc 43uireoaugibghui4reagf 1528
-    //     abc grereg 1960 23
         
-
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
             Text w1 = new Text();
             Text w2 = new Text();
             List<Text> arr = new ArrayList<Text>();
-
             long c_w1 = -1;
             for(Text value: values){
                 try{
                 StringTokenizer str = new StringTokenizer(value.toString());
-                if(str.countTokens() == 1){
-                    throw new Exception("special exception1. countTokens: "+str.countTokens() + " c_w1: " + c_w1);
-                    //context.write(key, value);
-                    //continue;
-                }
                 w1 = new Text(str.nextToken());
                 w2 = new Text(str.nextToken());
                 if(str.countTokens() == 1){ // c(w1)
-
                     c_w1 = Long.parseLong(str.nextToken());
                     continue;
                 }
-                else if(value.toString().contains(uniqueWord)){
-                    throw new Exception("special exception2. countTokens: "+str.countTokens() + " c_w1: " + c_w1);
-                }
+                
                 else{ // an entire entry
-                    if(value.toString().contains(uniqueWord))
-                        throw new Exception("special exception3. countTokens: "+str.countTokens() + " c_w1: " + c_w1);
-                    arr.add(value);
+                    Text temp = new Text(value.toString());
+                    arr.add(temp);
                 }
                 }catch(Exception e){
                     throw new IOException("key: "+key.toString() +" value: "+value.toString()+" the last stacktrace: "+e.getMessage());
@@ -148,8 +132,6 @@ public class JoinW1 {
            
                 for( Text value : arr){
                     try{
-                        if(value.toString().contains(uniqueWord))
-                            throw new Exception("special exception4. arr length: " +arr.size()+ " c_w1: " + c_w1);
                         Text ans = new Text("w1:"+c_w1);
                         context.write(value, ans);
                     }catch(Exception e){
@@ -174,7 +156,7 @@ public class JoinW1 {
         String inputFolderCountWords = args[2];
         String outputFolder = args[3];
         
-        String decade = "1950's"; // probably doesn't exists, but it's okay.
+        String decade = "1490's"; // probably doesn't exists, but it's okay.
         while(decade != null) {
         String N_string = aws.getObjectFromBucket(bucketName, inputFolderCountWords+"/"+"N_"+decade+".txt");
         if(N_string == null){

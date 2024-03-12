@@ -7,10 +7,11 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.SplitLocationInfo;
-import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.mapred.join.TupleWritable;
+import org.apache.hadoop.mapred.TextOutputFormat;
+// import org.apache.hadoop.mapred.InputFormat;
+// import org.apache.hadoop.mapred.SplitLocationInfo;
+// import org.apache.hadoop.mapred.TextInputFormat;
+// import org.apache.hadoop.mapred.join.TupleWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -19,6 +20,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.DataInput;
@@ -52,21 +55,45 @@ public class ReduceDecades {
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
-            word_1 = new Text();
-            word_2 = new Text();
-            year = new Text();
-            matchCount = new LongWritable();
+            try{
+                    word_1 = new Text();
+                    word_2 = new Text();
+                    year = new Text();
+                    matchCount = new LongWritable();
 
-            StringTokenizer itr = new StringTokenizer(value.toString());
-            word_1.set(itr.nextToken());
-            word_2.set(itr.nextToken());
-            year.set((itr.nextToken().substring(0, 3)).concat("0's"));
-            matchCount.set(Long.parseLong(itr.nextToken()));
-            
-            Text ans = new Text();
-            ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ year.toString());
-           if(year.toString().equals(decade))
-                context.write(ans, matchCount);
+                    StringTokenizer itr = new StringTokenizer(value.toString());
+                    if(checkValidity(value.toString())){
+                        word_1.set(itr.nextToken());
+                        word_2.set(itr.nextToken());
+                        String yearRecord = itr.nextToken();
+                        year.set((yearRecord.substring(0, 3)).concat("0's"));
+                        matchCount.set(Long.parseLong(itr.nextToken()));
+                        
+                        Text ans = new Text();
+                        ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ year.toString());
+                        if(year.toString().equals(decade))
+                            context.write(ans, matchCount);
+                    }
+            }catch (Exception e){
+                throw new IOException("key: "+key.toString() + " value: "+value.toString()+" message: "+e.getMessage() + " trace: "+e.getStackTrace().toString());
+            }
+        }
+
+        private boolean checkValidity(String record){
+            try{
+                String[] tokens = record.split("\t");
+                if(tokens.length >= 4){
+                    if(tokens[2].length() == 4 && Integer.parseInt(tokens[2]) > 0){ // validate year format
+                        if(Integer.parseInt(tokens[3])>=0){
+                            return true;
+                        }
+
+                    }
+                }
+                return false;
+            } catch (Exception e){
+                return false;
+            }
         }
     }
 
@@ -82,7 +109,6 @@ public class ReduceDecades {
     public static class ReducerClass extends Reducer<Text,LongWritable,Text,LongWritable> {
         @Override
         public void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException,  InterruptedException {
-            
             long sum = 0;
             for (LongWritable value : values) {
                 sum += value.get();
@@ -121,7 +147,6 @@ public class ReduceDecades {
         Configuration conf = new Configuration();
         conf.setQuietMode(false);
         conf.setStrings("decade", decade);
-        Job filterStopWords = Job.getInstance(conf, "Reduce Decades");
         
         job = Job.getInstance(conf, "Reduce Decades");
         job.setJarByClass(ReduceDecades.class);
@@ -137,12 +162,13 @@ public class ReduceDecades {
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one
-//        job.setOutputFormatClass(TextOutputFormat.class);
-//        job.setInputFormatClass(SequenceFileInputFormat.class);
-//        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
+       job.setOutputFormatClass(org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
+       job.setInputFormatClass(SequenceFileInputFormat.class);
+       //TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
         
         for(int i=0; i<inputFileKey.length; i++){
-            FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
+            TextInputFormat.addInputPath(job, new Path(inputFileKey[i]));
+            //FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
         }
 
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFileKey+"/"+decade));
