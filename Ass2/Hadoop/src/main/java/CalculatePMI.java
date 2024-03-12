@@ -78,7 +78,7 @@ public class CalculatePMI {
         @Override
         public int getPartition(Text key, Text value, int numPartitions) {
             
-            return key.toString().hashCode() % numPartitions;
+            return Math.abs(key.toString().hashCode()) % numPartitions;
         }
     }
 
@@ -180,8 +180,9 @@ public class CalculatePMI {
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderJoinedW1+"/"+decade+"_JoinW1.txt/part-r-00000"));
-        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountW+"/"+decade+"_wordCounts.txt/part-r-00000"));
+        CombineFileInputFormat.setInputDirRecursive(job, true); 
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderJoinedW1+"/"+decade+"_JoinW1.txt"/*/part-r-00000"*/));
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountW+"/"+decade+"_wordCounts.txt"/*/part-r-00000"*/));
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFolder+"/"+decade+"_PMIs.txt"));
         CombineFileInputFormat.setMaxInputSplitSize(job, 500000000);//500MB
         

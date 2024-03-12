@@ -103,7 +103,7 @@ public class CountWords {
         @Override
         public int getPartition(Text key, Text value, int numPartitions) {
            
-            return (key.toString().hashCode() % numPartitions);
+            return Math.abs(key.toString().hashCode()) % numPartitions;
         }
     }
 
@@ -165,7 +165,7 @@ public class CountWords {
         }
         if(args[1].equals("all")){
             allDecades = true;
-            CountWords.setDecade("1400's"); // starting decade
+            CountWords.setDecade("1490's"); // starting decade
         }
         else
         {
@@ -195,8 +195,9 @@ public class CountWords {
         job.setMapOutputValueClass(LongWritable.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(LongWritable.class);
+        FileInputFormat.setInputDirRecursive(job, true); 
         for(int i=0; i<inputFolder.length; i++){
-            FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolder[i]+"/"+decade+"/part-r-00000"));
+            FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolder[i]+"/"+decade/*+"/part-r-00000"*/));
         }
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFileKey+"/"+decade+"_wordCounts.txt"));
         

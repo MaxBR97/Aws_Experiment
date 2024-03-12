@@ -89,7 +89,7 @@ public class JoinW1 {
         @Override
         public int getPartition(Text key, Text value, int numPartitions) {
             
-            return key.toString().hashCode() % numPartitions;
+            return Math.abs(key.toString().hashCode()) % numPartitions;
         }
     }
 
@@ -182,9 +182,9 @@ public class JoinW1 {
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
-     
-        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountWords+"/"+decade+"_wordCounts.txt/part-r-00000"));
-        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderReducesDecades+"/"+decade+"/part-r-00000"));
+        CombineFileInputFormat.setInputDirRecursive(job, true); 
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderCountWords+"/"+decade+"_wordCounts.txt"/*/part-r-00000"*/));
+        CombineFileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFolderReducesDecades+"/"+decade/*/part-r-00000"*/));
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFolder+"/"+decade+"_JoinW1.txt"));
         CombineFileInputFormat.setMaxInputSplitSize(job, 500000000); // 500MB
         CombineFileInputFormat.setMinInputSplitSize(job, 400000000); //400MB

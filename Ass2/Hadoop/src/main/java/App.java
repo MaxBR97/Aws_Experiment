@@ -28,14 +28,15 @@ public class App {
     public static AWS aws ;
     public static String bucketName ;
 
-    public static int numberOfInstances = 1;
+    public static int numberOfInstances = 9;
 
     public static void main(String[]args){
 
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         emr = aws.emr;
-
+        // System.out.println("_NOUN\t,_a".hashCode());
+        // System.exit(0);
 //         aws.getObjectFromBucket("datasets.elasticmapreduce", "ngrams/books/20090715/eng-us-all/3gram/data",  Paths.get("").toAbsolutePath().resolve("example").toString());
 //        System.exit(0);
         
