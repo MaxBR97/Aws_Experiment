@@ -165,8 +165,8 @@ public class ReduceDecades {
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one
-    //    job.setOutputFormatClass(org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
-    //    job.setInputFormatClass(SequenceFileInputFormat.class);
+       job.setOutputFormatClass(org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
+       job.setInputFormatClass(SequenceFileInputFormat.class);
        //TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
         TextInputFormat.setInputDirRecursive(job, true); 
         for(int i=0; i<inputFileKey.length; i++){

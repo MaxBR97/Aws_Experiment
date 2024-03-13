@@ -98,10 +98,10 @@ public class CountWords {
         }
     }
 
-    public static class PartitionerClass extends Partitioner<Text, Text> {
+    public static class PartitionerClass extends Partitioner<Text, LongWritable> {
         
         @Override
-        public int getPartition(Text key, Text value, int numPartitions) {
+        public int getPartition(Text key, LongWritable value, int numPartitions) {
            
             return Math.abs(key.toString().hashCode()) % numPartitions;
         }
@@ -170,7 +170,7 @@ public class CountWords {
         else
         {
             CountWords.setDecade(args[1]);
-            allDecades = false;
+            allDecades = true;
         }
 
         do {

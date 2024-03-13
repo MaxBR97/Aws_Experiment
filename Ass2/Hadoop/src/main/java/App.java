@@ -46,6 +46,7 @@ public class App {
                 .withMainClass("Step1")
                 .withArgs("1960's","s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-all/2gram/data" , "step1_output");
                 // "s3://"+bucketName+"/"+"example_of_2gram_input1" ,"s3://"+bucketName+"/"+"example_of_2gram_input2" 
+                //"s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-all/2gram/data"
                 
         StepConfig stepConfig1 = new StepConfig()
                 .withName("Step1")
@@ -56,7 +57,7 @@ public class App {
         HadoopJarStepConfig step2 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/CountWords.jar")
                 .withMainClass("Step2")
-                .withArgs("all", "step1_output" , "step2_output");
+                .withArgs("1960's", "step1_output" , "step2_output");
 
         StepConfig stepConfig2 = new StepConfig()
                 .withName("Step2")
@@ -108,7 +109,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1   /*  , stepConfig2, stepConfig3 , stepConfig4 stepConfig5*/)
+                .withSteps(stepConfig1 , stepConfig2, stepConfig3 , stepConfig4, stepConfig5)
                 .withLogUri("s3://"+bucketName+"")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")
