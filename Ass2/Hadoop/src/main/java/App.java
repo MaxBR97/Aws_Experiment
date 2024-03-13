@@ -28,26 +28,26 @@ public class App {
     public static AWS aws ;
     public static String bucketName ;
 
-    public static int numberOfInstances = 1;
+    public static int numberOfInstances = 9;
 
     public static void main(String[]args){
 
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         emr = aws.emr;
-
-        //System.exit(0);
-
+        // System.out.println("_NOUN\t,_a".hashCode());
+        // System.exit(0);
 //         aws.getObjectFromBucket("datasets.elasticmapreduce", "ngrams/books/20090715/eng-us-all/3gram/data",  Paths.get("").toAbsolutePath().resolve("example").toString());
 //        System.exit(0);
         
-
         // Step 1 - map reduce
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/ReduceDecades.jar")
                 .withMainClass("Step1")
-                .withArgs("1960's","example_of_2gram_input1", "example_of_2gram_input2" , "step1_output");
-
+                .withArgs("1960's","s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-all/2gram/data" , "step1_output");
+                // "s3://"+bucketName+"/"+"example_of_2gram_input1" ,"s3://"+bucketName+"/"+"example_of_2gram_input2" 
+                //"s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-all/2gram/data"
+                
         StepConfig stepConfig1 = new StepConfig()
                 .withName("Step1")
                 .withHadoopJarStep(step1)
@@ -57,7 +57,7 @@ public class App {
         HadoopJarStepConfig step2 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/CountWords.jar")
                 .withMainClass("Step2")
-                .withArgs("all", "step1_output" , "step2_output");
+                .withArgs("1960's", "step1_output" , "step2_output");
 
         StepConfig stepConfig2 = new StepConfig()
                 .withName("Step2")
@@ -83,13 +83,23 @@ public class App {
                 .withName("Step4")
                 .withHadoopJarStep(step4)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
+        
+        HadoopJarStepConfig step5 = new HadoopJarStepConfig()
+                .withJar("s3://"+bucketName+"/FindCoallocations.jar")
+                .withMainClass("Step5")
+                .withArgs("0.77","1","step4_output", "step4_output", "step5_output - FINAL");
+
+        StepConfig stepConfig5 = new StepConfig()
+                .withName("Step5")
+                .withHadoopJarStep(step5)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
 
 
         //Job flow`
         JobFlowInstancesConfig instances = new JobFlowInstancesConfig()
                 .withInstanceCount(numberOfInstances)
-                .withMasterInstanceType(InstanceType.M4Large.toString())
-                .withSlaveInstanceType(InstanceType.M4Large.toString())
+                .withMasterInstanceType(InstanceType.M4Xlarge.toString())
+                .withSlaveInstanceType(InstanceType.M4Xlarge.toString())
                 .withHadoopVersion("2.9.2")
                 .withEc2KeyName("vockey")
                 .withKeepJobFlowAliveWhenNoSteps(false)
@@ -99,7 +109,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(/*stepConfig1, stepConfig2,*/ stepConfig3 , stepConfig4)
+                .withSteps(stepConfig1 , stepConfig2, stepConfig3 , stepConfig4, stepConfig5)
                 .withLogUri("s3://"+bucketName+"")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")
