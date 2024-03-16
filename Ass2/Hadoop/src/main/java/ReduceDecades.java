@@ -1,4 +1,5 @@
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IntWritable;
@@ -24,13 +25,11 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
+import java.net.URI;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 public class ReduceDecades {
@@ -46,10 +45,23 @@ public class ReduceDecades {
         private Text year;
         private LongWritable matchCount;
         private String decade;
+        private Set<String> wordSet = new HashSet<>();
 
-        public void setup(Context context) {
+
+        public void setup(Context context) throws IOException {
             Configuration config = context.getConfiguration();
             decade = config.getStrings("decade")[0];
+            Configuration conf = context.getConfiguration();
+            bucketName = conf.get("bucketName");
+            String fileName =  conf.get("filterList");
+            String filePath = "s3://" + bucketName + "/" + fileName;
+
+            FileSystem fs = FileSystem.get(URI.create(filePath), conf);
+            BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(new Path(filePath))));
+            String line;
+            while ((line = br.readLine()) != null) {
+                wordSet.add(line);
+            }
         }
         
 
@@ -72,7 +84,9 @@ public class ReduceDecades {
                         Text ans = new Text();
                         ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ year.toString());
                         if(year.toString().equals(decade))
-                            context.write(ans, new Text(String.valueOf(matchCount.get())));
+                            if (!wordSet.contains(word_1.toString()) && !wordSet.contains(word_2.toString())) {
+                                context.write(ans, new Text(String.valueOf(matchCount.get())));
+                            }
                     }
             // }catch (Exception e){
             //     throw new IOException("key: "+key.toString() + " value: "+value.toString()+" message: "+e.getMessage() + " trace: "+e.getStackTrace().toString());
@@ -133,16 +147,17 @@ public class ReduceDecades {
             System.out.print("args["+i+"]"+" : "+args[i] +", ");
         }
         System.out.println("\n");
-        String[] inputFileKey = new String[args.length-3];
-        String outputFileKey = args[args.length-1];
-        for(int i=2; i<args.length - 1;i++){
+        String[] inputFileKey = new String[args.length-4];
+        String outputFileKey = args[args.length-2];
+        for(int i=2; i<args.length - 2;i++){
            inputFileKey[i-2] = args[i];
         }
 
         for(int i=0; i<inputFileKey.length;i++){
             System.out.println("input: "+inputFileKey[i]);
          }
-         System.out.println("out: "+outputFileKey);
+        System.out.println("out: "+outputFileKey);
+        System.out.println("stopwords: "+args[args.length-1]);
          
         String decade = args[1];
         Job job = null;
@@ -150,7 +165,8 @@ public class ReduceDecades {
         Configuration conf = new Configuration();
         conf.setQuietMode(false);
         conf.setStrings("decade", decade);
-        
+        conf.set("filterList", args[args.length-1]);
+        conf.set("bucketName", bucketName);
         job = Job.getInstance(conf, "Reduce Decades");
         job.setJarByClass(ReduceDecades.class);
         job.setMapperClass(MapperClass.class);
