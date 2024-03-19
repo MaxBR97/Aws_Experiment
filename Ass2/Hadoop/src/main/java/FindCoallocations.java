@@ -1,6 +1,7 @@
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -29,6 +30,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 
 public class FindCoallocations {
@@ -36,7 +39,7 @@ public class FindCoallocations {
     public static String bucketName;
     public static AWS aws;
 
-    public static class MapperClass extends Mapper<LongWritable, Text, Text , Text> {
+    public static class MapperClass extends Mapper<LongWritable, Text, DoubleWritable , Text> {
         String decade;
         double sumNPMI;
         double minNPMI;
@@ -54,11 +57,32 @@ public class FindCoallocations {
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
            String[] record =value.toString().split("\t");
            double npmi = Double.parseDouble(record[6]);
-           if(npmi >= minNPMI || (npmi/sumNPMI) >= minRelNPMI){
+           if((npmi >= minNPMI || (npmi/sumNPMI) >= minRelNPMI) && npmi < 1.0){
                 Text coallocation = new Text(record[0] +"\t"+record[1]);
-                Text NPMIRecord = new Text("NPMI:"+record[6]);
-                context.write(coallocation, NPMIRecord);
+                context.write(new DoubleWritable((-1) * npmi), coallocation); // switched in order to sort by NPMI value
            }
+        }
+    }
+
+    public static class PartitionerClass extends Partitioner<DoubleWritable, Text> {
+        
+        @Override
+        public int getPartition(DoubleWritable key, Text value, int numPartitions) {
+            return 1; // all pairs to be processed by one reducer.
+        }
+    }
+
+    public static class ReducerClass extends Reducer<DoubleWritable,Text,Text,Text> {
+
+        public void setup(Context context) {
+            
+        }
+        
+        @Override
+        public void reduce(DoubleWritable key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
+            for (Text val: values){
+                context.write(val, new Text("NPMI:"+((-1) *key.get()) )); // switch order back
+            }
         }
     }
 
@@ -95,7 +119,9 @@ public class FindCoallocations {
         Job job = Job.getInstance(conf, "Find Coallocations" + decade);
         job.setJarByClass(FindCoallocations.class);
         job.setMapperClass(MapperClass.class);
-        job.setMapOutputKeyClass(Text.class);
+        job.setPartitionerClass(PartitionerClass.class);
+        job.setReducerClass(ReducerClass.class);
+        job.setMapOutputKeyClass(DoubleWritable.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);

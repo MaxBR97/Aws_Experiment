@@ -1,0 +1,17 @@
+Liam Habani, Max Brener
+ID: __________ , 208850529
+S3 output directory:
+
+
+How to run the project:
+Extract Jar files as following:
+ReduceDecades - Step1
+CountWords - Step2
+JoinW1 - Step3
+CalculatePMI - Step4
+FindCoallocations - Step5
+Upload the files to an S3 bucket, corresponding to the given name of 'bucketName' in AWS class.
+Extract a jar file with App as the main method
+run the Jar file as follows: java -jar App.jar ExtractCollations (minNPMI) (relMinPMI)
+the output will be in the S3 folder "step5_output - FINAL".
+
