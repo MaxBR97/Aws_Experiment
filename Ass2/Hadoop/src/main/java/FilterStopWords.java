@@ -8,10 +8,11 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.SplitLocationInfo;
-import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.mapred.join.TupleWritable;
+import org.apache.hadoop.mapred.TextOutputFormat;
+// import org.apache.hadoop.mapred.InputFormat;
+// import org.apache.hadoop.mapred.SplitLocationInfo;
+// import org.apache.hadoop.mapred.TextInputFormat;
+// import org.apache.hadoop.mapred.join.TupleWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -20,10 +21,13 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.*;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
@@ -50,14 +54,20 @@ public class FilterStopWords {
             bucketName = conf.get("bucketName");
             String fileName =  conf.get("filterList");
             String filePath = "s3://" + bucketName + "/" + fileName;
-
-            FileSystem fs = FileSystem.get(URI.create(filePath), conf);
-            BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(new Path(filePath))));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    wordSet.add(line);
+            System.out.println(filePath);
+            try {
+                FileSystem fs = FileSystem.get(new URI(filePath), conf);
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(new Path(filePath))))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        wordSet.add(line);
+                    }
                 }
+            } catch (Exception  e) {
 
+                throw new IOException("ERROR PATH" + filePath );
+
+            }
 
         }
 
@@ -72,7 +82,7 @@ public class FilterStopWords {
             StringTokenizer itr = new StringTokenizer(value.toString());
             word_1.set(itr.nextToken());
             word_2.set(itr.nextToken());
-            decade.set((itr.nextToken().substring(0, 3)).concat("0's"));
+            decade.set(itr.nextToken());
             matchCount.set(Long.parseLong(itr.nextToken()));
 
             Text ans = new Text();
@@ -89,7 +99,7 @@ public class FilterStopWords {
 
         @Override
         public int getPartition(Text key, LongWritable value, int numPartitions) {
-            return (key.toString().hashCode() % numPartitions);
+            return ((key.toString().hashCode() & Integer.MAX_VALUE) % numPartitions);
 
         }
     }
@@ -107,7 +117,7 @@ public class FilterStopWords {
     //Receives n args: 0 - Step1 1 - inputFileName1, 2 - inputFileName2, ....... n-1 inputFileName(n-1) , n outputFileName
     public static void main(String[] args) throws Exception {
         //type <inputPath>* <outputPath> <stopwordfile>
-        System.out.println("[DEBUG] STEP 1 started!");
+        System.out.println("[DEBUG] STEP 0 started!");
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         int inputs = args.length;
@@ -122,17 +132,18 @@ public class FilterStopWords {
         for(int i=1; i<args.length - 2;i++){
             inputFileKey[i-1] = args[i];
         }
+        System.out.println("input file size : "+inputFileKey.length);
 
         for(int i=0; i<inputFileKey.length;i++){
             System.out.println("input: "+inputFileKey[i]);
         }
         System.out.println("out: "+outputFileKey);
-        System.out.println("stop word file: "+outputFileKey);
+        System.out.println("stop word file: "+stopwordsFileKey);
 
 
         Configuration conf = new Configuration();
-        conf.set("filterList", args[args.length-1]);
-        conf.set("bucketName", bucketName);
+        conf.setStrings("filterList", stopwordsFileKey);
+        conf.setStrings("bucketName", bucketName);
 
         conf.setQuietMode(false);
         Job filterStopWords = Job.getInstance(conf, "Filter Stop");
@@ -148,12 +159,16 @@ public class FilterStopWords {
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(LongWritable.class);
 
+        job.setOutputFormatClass(org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
+        job.setInputFormatClass(SequenceFileInputFormat.class);
 
         for(int i=0; i<inputFileKey.length; i++){
-            FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
+            TextInputFormat.addInputPath(job, new Path(inputFileKey[i]));
+            //FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
         }
 
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFileKey));
+
 
         job.waitForCompletion(true);
 
