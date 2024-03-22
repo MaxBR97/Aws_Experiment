@@ -15,3 +15,29 @@ Extract a jar file with App as the main method
 run the Jar file as follows: java -jar App.jar ExtractCollations (minNPMI) (relMinPMI)
 the output will be in the S3 folder "step5_output - FINAL".
 
+good collocations
+אומנות	ומלאכה
+באישון	לילה
+אופים	ומבשלים
+אתר	הנופש
+בהקדם	האפשרי
+Akshaya	Tritiya
+populeo suspirat
+sheliach	tzibbur
+spirituous	liquors
+psychologia	rationalis
+bad collocations
+0	וף
+%	מההון
+$	ריך
+"יעקב	1998
+[	וכידוע
+'	t
+425.00	FIREWALLS
+nexae	philyra
+micosis	fungoidea
+adhesio	interthalamica
+
+
+time to run full :6 hours a 55 minutes. with 39 maps
+time to run half 4 hours and 31 min
