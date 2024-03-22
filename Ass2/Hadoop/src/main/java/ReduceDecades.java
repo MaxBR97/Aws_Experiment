@@ -45,23 +45,12 @@ public class ReduceDecades {
         private Text year;
         private LongWritable matchCount;
         private String decade;
-        private Set<String> wordSet = new HashSet<>();
 
 
         public void setup(Context context) throws IOException {
             Configuration config = context.getConfiguration();
             decade = config.getStrings("decade")[0];
-            Configuration conf = context.getConfiguration();
-            bucketName = conf.get("bucketName");
-            String fileName =  conf.get("filterList");
-            String filePath = "s3://" + bucketName + "/" + fileName;
 
-            FileSystem fs = FileSystem.get(URI.create(filePath), conf);
-            BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(new Path(filePath))));
-            String line;
-            while ((line = br.readLine()) != null) {
-                wordSet.add(line);
-            }
         }
         
 
@@ -84,9 +73,8 @@ public class ReduceDecades {
                         Text ans = new Text();
                         ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ year.toString());
                         if(year.toString().equals(decade))
-                            if (!wordSet.contains(word_1.toString()) && !wordSet.contains(word_2.toString())) {
                                 context.write(ans, new Text(String.valueOf(matchCount.get())));
-                            }
+
                     }
             // }catch (Exception e){
             //     throw new IOException("key: "+key.toString() + " value: "+value.toString()+" message: "+e.getMessage() + " trace: "+e.getStackTrace().toString());
@@ -147,9 +135,9 @@ public class ReduceDecades {
             System.out.print("args["+i+"]"+" : "+args[i] +", ");
         }
         System.out.println("\n");
-        String[] inputFileKey = new String[args.length-4];
-        String outputFileKey = args[args.length-2];
-        for(int i=2; i<args.length - 2;i++){
+        String[] inputFileKey = new String[args.length-3];
+        String outputFileKey = args[args.length-1];
+        for(int i=2; i<args.length - 1;i++){
            inputFileKey[i-2] = args[i];
         }
 
@@ -157,16 +145,14 @@ public class ReduceDecades {
             System.out.println("input: "+inputFileKey[i]);
          }
         System.out.println("out: "+outputFileKey);
-        System.out.println("stopwords: "+args[args.length-1]);
-         
+
         String decade = args[1];
         Job job = null;
         while(decade != null){
         Configuration conf = new Configuration();
         conf.setQuietMode(false);
         conf.setStrings("decade", decade);
-        conf.set("filterList", args[args.length-1]);
-        conf.set("bucketName", bucketName);
+
         job = Job.getInstance(conf, "Reduce Decades");
         job.setJarByClass(ReduceDecades.class);
         job.setMapperClass(MapperClass.class);
@@ -181,13 +167,14 @@ public class ReduceDecades {
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one
-       job.setOutputFormatClass(org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
-       job.setInputFormatClass(SequenceFileInputFormat.class);
+       //job.setOutputFormatClass(org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
+       //job.setInputFormatClass(SequenceFileInputFormat.class);
+
        //TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
         TextInputFormat.setInputDirRecursive(job, true); 
         for(int i=0; i<inputFileKey.length; i++){
-            TextInputFormat.addInputPath(job, new Path(inputFileKey[i]));
-            //FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
+           // TextInputFormat.addInputPath(job, new Path(inputFileKey[i]));
+            FileInputFormat.addInputPath(job, new Path("s3://"+bucketName+"/"+inputFileKey[i]));
         }
 
         FileOutputFormat.setOutputPath(job, new Path("s3://"+bucketName+"/"+outputFileKey+"/"+decade));
