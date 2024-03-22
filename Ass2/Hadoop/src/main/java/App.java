@@ -28,23 +28,36 @@ public class App {
     public static AWS aws ;
     public static String bucketName ;
 
-    public static int numberOfInstances = 9;
+    public static int numberOfInstances = 8;
 
     public static void main(String[]args){
 
         aws = AWS.getInstance();
         bucketName = aws.bucketName;
         emr = aws.emr;
-        // System.out.println("_NOUN\t,_a".hashCode());
-        // System.exit(0);
-//         aws.getObjectFromBucket("datasets.elasticmapreduce", "ngrams/books/20090715/eng-us-all/3gram/data",  Paths.get("").toAbsolutePath().resolve("example").toString());
-//        System.exit(0);
-        
+        if (args.length != 3) {
+            System.out.println("error Usage: classname  minPmi relMinPmi");
+            return;
+        }
+
+        String minPmi = args[1];
+        String relMinPmi = args[2];
+        //step 0
+        HadoopJarStepConfig step0 = new HadoopJarStepConfig()
+                .withJar("s3://"+bucketName+"/FilterStopWords.jar")
+                .withMainClass("Step0")
+                .withArgs("s3://datasets.elasticmapreduce/ngrams/books/20090715/heb-all/2gram/data" , "step0_output","heb-stopwords.txt");
+        // "s3://"+bucketName+"/"+"example_of_2gram_input1" ,"s3://"+bucketName+"/"+"example_of_2gram_input2"
+        //"s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-all/2gram/data"
+        StepConfig stepConfig0 = new StepConfig()
+                .withName("Step0")
+                .withHadoopJarStep(step0)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
         // Step 1 - map reduce
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/ReduceDecades.jar")
                 .withMainClass("Step1")
-                .withArgs("1960's","s3://datasets.elasticmapreduce/ngrams/books/20090715/heb-all/2gram/data" , "step1_output","heb-stopwords.txt");
+                .withArgs("1500's","step0_output" , "step1_output");
                 // "s3://"+bucketName+"/"+"example_of_2gram_input1" ,"s3://"+bucketName+"/"+"example_of_2gram_input2" 
                 //"s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-all/2gram/data"
         StepConfig stepConfig1 = new StepConfig()
@@ -56,7 +69,7 @@ public class App {
         HadoopJarStepConfig step2 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/CountWords.jar")
                 .withMainClass("Step2")
-                .withArgs("1960's", "step1_output" , "step2_output");
+                .withArgs("1500's", "step1_output" , "step2_output");
 
         StepConfig stepConfig2 = new StepConfig()
                 .withName("Step2")
@@ -86,7 +99,7 @@ public class App {
         HadoopJarStepConfig step5 = new HadoopJarStepConfig()
                 .withJar("s3://"+bucketName+"/FindCoallocations.jar")
                 .withMainClass("Step5")
-                .withArgs("0.77","1","step4_output", "step4_output", "step5_output - FINAL");
+                .withArgs(minPmi,relMinPmi,"step4_output", "step4_output", "step5_output - FINAL");
 
         StepConfig stepConfig5 = new StepConfig()
                 .withName("Step5")
@@ -108,7 +121,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1 , stepConfig2, stepConfig3 , stepConfig4, stepConfig5  )
+                .withSteps(stepConfig0,stepConfig1, stepConfig2, stepConfig3 , stepConfig4, stepConfig5  )
                 .withLogUri("s3://"+bucketName+"")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")
