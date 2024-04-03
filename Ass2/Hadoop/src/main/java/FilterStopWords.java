@@ -80,18 +80,39 @@ public class FilterStopWords {
             matchCount = new LongWritable();
 
             StringTokenizer itr = new StringTokenizer(value.toString());
-            word_1.set(itr.nextToken());
-            word_2.set(itr.nextToken());
-            decade.set(itr.nextToken());
-            matchCount.set(Long.parseLong(itr.nextToken()));
+            if(checkValidity(value.toString())) {
+                word_1.set(itr.nextToken());
+                word_2.set(itr.nextToken());
+                decade.set(itr.nextToken());
+                matchCount.set(Long.parseLong(itr.nextToken()));
 
-            Text ans = new Text();
-            ans.set(word_1.toString() +"\t"+ word_2.toString() +"\t"+ decade.toString());
-            if (!wordSet.contains(word_1.toString()) && !wordSet.contains(word_2.toString())) {
-                context.write(ans, matchCount);
+                Text ans = new Text();
+                ans.set(word_1.toString() + "\t" + word_2.toString() + "\t" + decade.toString());
+                if (!wordSet.contains(word_1.toString()) && !wordSet.contains(word_2.toString())) {
+                    context.write(ans, matchCount);
+                }
             }
 
+        }
 
+        private boolean checkValidity(String record){
+            try{
+                StringTokenizer itr = new StringTokenizer(record);
+                if(itr.countTokens() >= 4){
+                    itr.nextToken();
+                    itr.nextToken();
+                    String year = itr.nextToken();
+                    if(year.length() == 4 && Integer.parseInt(year) > 0){ // validate year format
+                        if(Long.parseLong(itr.nextToken())>=0){
+                            return true;
+                        }
+
+                    }
+                }
+                return false;
+            } catch (Exception e){
+                return false;
+            }
         }
     }
 

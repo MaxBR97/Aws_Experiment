@@ -63,7 +63,6 @@ public class ReduceDecades {
                     matchCount = new LongWritable();
 
                     StringTokenizer itr = new StringTokenizer(value.toString());
-                    if(checkValidity(value.toString())){
                         word_1.set(itr.nextToken());
                         word_2.set(itr.nextToken());
                         String yearRecord = itr.nextToken();
@@ -75,31 +74,13 @@ public class ReduceDecades {
                         if(year.toString().equals(decade))
                                 context.write(ans, new Text(String.valueOf(matchCount.get())));
 
-                    }
+
             // }catch (Exception e){
             //     throw new IOException("key: "+key.toString() + " value: "+value.toString()+" message: "+e.getMessage() + " trace: "+e.getStackTrace().toString());
             // }
         }
 
-        private boolean checkValidity(String record){
-            try{
-                StringTokenizer itr = new StringTokenizer(record);
-                if(itr.countTokens() >= 4){
-                    itr.nextToken();
-                    itr.nextToken();
-                    String year = itr.nextToken();
-                    if(year.length() == 4 && Integer.parseInt(year) > 0){ // validate year format
-                        if(Long.parseLong(itr.nextToken())>=0){
-                            return true;
-                        }
 
-                    }
-                }
-                return false;
-            } catch (Exception e){
-                return false;
-            }
-        }
     }
 
     public static class PartitionerClass extends Partitioner<Text, Text> {
