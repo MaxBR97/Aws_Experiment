@@ -15,7 +15,8 @@ Extract a jar file with App as the main method
 run the Jar file as follows: java -jar App.jar ExtractCollations (minNPMI) (relMinPMI)
 the output will be in the S3 folder "step5_output - FINAL".
 
-good collocations
+### good collocations
+```
 אומנות	ומלאכה
 באישון	לילה
 אופים	ומבשלים
@@ -26,7 +27,9 @@ populeo suspirat
 sheliach	tzibbur
 spirituous	liquors
 psychologia	rationalis
-bad collocations
+```
+### bad collocations
+```
 0	וף
 %	מההון
 $	ריך
@@ -37,8 +40,45 @@ $	ריך
 nexae	philyra
 micosis	fungoidea
 adhesio	interthalamica
-
-
-time to run full :6 hours a 55 minutes. 
+```
+### Times
+```
+time to run full :6 hours a 55 minutes. (39 splits)
+time to run full :4 hours a 42 minutes (54 splits)
 time to run half 4 hours and 31 min
-.
+```
+
+### Step0
+```
+Map output records = 128462099
+Map output bytes = 4219388226
+```
+### Step1
+```
+Map output records 118656534
+Map output bytes 3473270433
+```
+### Step2
+```
+Map output records  60945704
+Map output bytes 6065559950
+
+### Step3
+
+```
+Map output records 56866986
+Map output bytes 2271863526
+```
+### Step4
+
+```
+Map output records 57193088
+Map output bytes 2722063718
+
+### Step5
+
+```
+Map output records 8455958
+Map output bytes 390369210
+```
+
