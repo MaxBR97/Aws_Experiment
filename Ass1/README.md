@@ -1,5 +1,4 @@
 Liam Habani & Max Brener
-322563529_208850529
 
 Instructions:
 
